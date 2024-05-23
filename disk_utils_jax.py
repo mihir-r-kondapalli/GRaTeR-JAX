@@ -70,4 +70,5 @@ def jax_model_scal(DistrModel, FuncModel, disk_params, spf_params,
                                                                 FuncModel, x_vector, y_vector, scattered_light_map, image, limage,
                                                                 tmp, halfNbSlices)
     
-    return disk_params['flux_scaling']*scattered_light_image[0][0]
+    #return disk_params['flux_scaling']*scattered_light_image[0][0]
+    return disk_params['flux_scaling']
