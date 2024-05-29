@@ -74,10 +74,10 @@ class DustEllipticalDistribution2PowerLaws(Jax_class):
         # Set Radial Density Analogue
         ain = jnp.where(ain < 0.1, 0.1, ain)
         aout = jnp.where(aout > -0.1, -0.1, aout)
-        e = jnp.where(e < 0, 0., e)
+        e = jnp.where(e < 0., 0., e)
         e = jnp.where(e >= 1, 0.99, e)
         amin = jnp.where(amin < 0., 0., amin)
-        dens_at_r0 = jnp.where(dens_at_r0 < 0, 1, dens_at_r0)
+        dens_at_r0 = jnp.where(dens_at_r0 < 0., 1., dens_at_r0)
 
         p_dict["ain"] = ain
         p_dict["aout"] = aout
@@ -116,7 +116,7 @@ class DustEllipticalDistribution2PowerLaws(Jax_class):
         #if distr["pmin"] > 0:
         #    radial_density_term[r/(distr["pmin"]/(1-distr["e"]*costheta)) <= 1] = 0
         radial_density_term = jnp.where(distr["pmin"] > 0, 
-                                        jnp.where(r/(distr["pmin"]/(1-distr["e"]*costheta)) <= 1, 0, radial_density_term),
+                                        jnp.where(r/(distr["pmin"]/(1-distr["e"]*costheta)) <= 1, 0., radial_density_term),
                                         radial_density_term)
 
         den2 = (distr["ksi0"]*jnp.power(radial_ratio, distr["beta"]))
