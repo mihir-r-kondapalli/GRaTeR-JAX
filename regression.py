@@ -6,7 +6,7 @@ from functools import partial
 
 
 @partial(jax.jit, static_argnums=(0,1))
-def likelihood(DistrModel, FuncModel, disk_params, spf_params, target_image, err_map):
+def log_likelihood(DistrModel, FuncModel, disk_params, spf_params, target_image, err_map):
     model_image = jax_model(DistrModel, FuncModel, disk_params=disk_params, spf_params=spf_params) # (y)
     sigma2 = jnp.power(err_map, 2)
     result = jnp.power((target_image - model_image), 2) / sigma2 + jnp.log(sigma2)
@@ -14,7 +14,7 @@ def likelihood(DistrModel, FuncModel, disk_params, spf_params, target_image, err
     return -0.5 * jnp.sum(result)
 
 @partial(jax.jit, static_argnums=(1,2))
-def likelihood_1d(disk_params, DistrModel, FuncModel, spf_params, flux_scaling, target_image, err_map):
+def log_likelihood_1d(disk_params, DistrModel, FuncModel, spf_params, flux_scaling, target_image, err_map):
     model_image = jax_model_1d(DistrModel, FuncModel, disk_params, spf_params, flux_scaling) # (y)
     sigma2 = jnp.power(err_map, 2) 
     result = jnp.power((target_image - model_image), 2) / sigma2 + jnp.log(sigma2)
@@ -26,7 +26,7 @@ def manual_regression(target_image, DistrModel, FuncModel, spf_params, err_map, 
     # 0: alpha_in, 1: alpha_out, 2: sma, 3: inclination, 4: position_angle
     disk_params = np.array([3, -3, 20, 20, 5])
 
-    min_val = -likelihood_1d(disk_params, DistrModel, FuncModel, spf_params, flux_scaling, target_image, err_map)
+    min_val = -log_likelihood_1d(disk_params, DistrModel, FuncModel, spf_params, flux_scaling, target_image, err_map)
 
     min_ain, min_aout, min_sma, min_inc, min_pa = 3, -3, 20, 20, 10
 
@@ -45,7 +45,7 @@ def manual_regression(target_image, DistrModel, FuncModel, spf_params, err_map, 
                     for m in range(min_pa, 50):
                         disk_params[4] = float(m)
 
-                        val = -likelihood_1d(disk_params, DistrModel, FuncModel, spf_params, flux_scaling, target_image, err_map)
+                        val = -log_likelihood_1d(disk_params, DistrModel, FuncModel, spf_params, flux_scaling, target_image, err_map)
 
                         if(val < min_val):
                             min_ain = i
