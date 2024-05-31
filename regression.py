@@ -6,19 +6,17 @@ from functools import partial
 
 
 @partial(jax.jit, static_argnums=(0,1))
-def likelihood(DistrModel, FuncModel, disk_params, spf_params, target_image, err_map=jnp.ones([49, 140, 140])):
+def likelihood(DistrModel, FuncModel, disk_params, spf_params, target_image, err_map):
     model_image = jax_model(DistrModel, FuncModel, disk_params=disk_params, spf_params=spf_params) # (y)
-    yerr = jnp.power((model_image-target_image)/(err_map),2)
-    sigma2 = jnp.power(yerr, 2) + jnp.power(model_image, 2)
+    sigma2 = jnp.power(err_map, 2)
     result = jnp.power((target_image - model_image), 2) / sigma2 + jnp.log(sigma2)
     result = jnp.where(jnp.isnan(result), 0, result)
     return -0.5 * jnp.sum(result)
 
 @partial(jax.jit, static_argnums=(1,2))
-def likelihood_1d(disk_params, DistrModel, FuncModel, spf_params, flux_scaling, target_image, err_map=jnp.ones([49, 140, 140])):
+def likelihood_1d(disk_params, DistrModel, FuncModel, spf_params, flux_scaling, target_image, err_map):
     model_image = jax_model_1d(DistrModel, FuncModel, disk_params, spf_params, flux_scaling) # (y)
-    yerr = jnp.power((model_image-target_image)/(err_map),2)
-    sigma2 = jnp.power(yerr, 2) + jnp.power(model_image, 2)
+    sigma2 = jnp.power(err_map, 2) 
     result = jnp.power((target_image - model_image), 2) / sigma2 + jnp.log(sigma2)
     result = jnp.where(jnp.isnan(result), 0, result)
     return -0.5 * jnp.sum(result)
