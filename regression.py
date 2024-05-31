@@ -21,12 +21,12 @@ def likelihood_1d(disk_params, DistrModel, FuncModel, spf_params, flux_scaling, 
     result = jnp.where(jnp.isnan(result), 0, result)
     return -0.5 * jnp.sum(result)
 
-# Brute Force Regression Method
-def manual_regression(target_image, DistrModel, FuncModel, spf_params, flux_scaling=1e6, bounds=None):
+# Grid Search Regression Method
+def manual_regression(target_image, DistrModel, FuncModel, spf_params, err_map, flux_scaling=1e6, bounds=None):
     # 0: alpha_in, 1: alpha_out, 2: sma, 3: inclination, 4: position_angle
     disk_params = np.array([3, -3, 20, 20, 5])
 
-    min_val = -likelihood_1d(disk_params, DistrModel, FuncModel, spf_params, flux_scaling, target_image)
+    min_val = -likelihood_1d(disk_params, DistrModel, FuncModel, spf_params, flux_scaling, target_image, err_map)
 
     min_ain, min_aout, min_sma, min_inc, min_pa = 3, -3, 20, 20, 10
 
@@ -45,7 +45,7 @@ def manual_regression(target_image, DistrModel, FuncModel, spf_params, flux_scal
                     for m in range(min_pa, 50):
                         disk_params[4] = float(m)
 
-                        val = -likelihood_1d(disk_params, DistrModel, FuncModel, spf_params, flux_scaling, target_image)
+                        val = -likelihood_1d(disk_params, DistrModel, FuncModel, spf_params, flux_scaling, target_image, err_map)
 
                         if(val < min_val):
                             min_ain = i
