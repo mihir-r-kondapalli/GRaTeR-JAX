@@ -47,7 +47,7 @@ class ScatteredLightDisk(Jax_class):
 
     @classmethod
     @partial(jax.jit, static_argnums=(0,))
-    def init(cls, distr_params, inc, pa, ain, aout, sma, nx=200, ny=200, distance=50., itilt=60., omega=0., pxInArcsec=0.01225,
+    def init(cls, distr_params, inc, pa, ain, aout, sma, nx=200, ny=200, distance=50., omega=0., pxInArcsec=0.01225,
              flux_max=None, xdo=0., ydo=0.):
 
         p_dict = {}
@@ -55,7 +55,6 @@ class ScatteredLightDisk(Jax_class):
         p_dict["nx"] = nx    # number of pixels along the x axis of the image
         p_dict["ny"] = ny    # number of pixels along the y axis of the image
         p_dict["distance"] = distance  # distance to the star in pc
-        p_dict["itilt"] = itilt
         p_dict["omega"] = omega
         p_dict["flux_max"] = flux_max
 
@@ -68,7 +67,7 @@ class ScatteredLightDisk(Jax_class):
         p_dict["rmin"] = jnp.sqrt(p_dict["xdo"]**2+p_dict["ydo"]**2)+p_dict["pxInAU"]
         # star center along the y- and x-axis, in pixels
 
-        p_dict["itilt"] = itilt  # inclination wrt the line of sight in deg
+        p_dict["itilt"] = inc  # inclination wrt the line of sight in deg
         p_dict["cosi"] = jnp.cos(jnp.deg2rad(p_dict["itilt"]))
         p_dict["sini"] = jnp.sin(jnp.deg2rad(p_dict["itilt"]))
 
