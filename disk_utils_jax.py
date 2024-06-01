@@ -15,7 +15,7 @@ def jax_model(DistrModel, FuncModel, disk_params={'inclination': 0., 'position_a
     disk_params_jax = ScatteredLightDisk.init(distr_params, disk_params['inclination'], disk_params['position_angle'],
                                               disk_params['alpha_in'], disk_params['alpha_out'], disk_params['sma'],
                                               nx=nx, ny=ny, distance = distance, omega =0., pxInArcsec=pxInArcsec,
-                                              flux_max=None, xdo=0., ydo=0.)
+                                              xdo=0., ydo=0.)
 
     yc, xc = ny, nx
     xc = jnp.where(nx%2==1, nx/2-0.5, nx/2).astype(int)
@@ -49,7 +49,7 @@ def jax_model_scal(DistrModel, FuncModel, disk_params, spf_params,
     disk_params_jax = ScatteredLightDisk.init(distr_params, disk_params['inclination'], disk_params['position_angle'],
                                               disk_params['alpha_in'], disk_params['alpha_out'], disk_params['sma'],
                                               nx=nx, ny=ny, distance = distance, omega =0., pxInArcsec=pxInArcsec,
-                                              flux_max=None, xdo=0., ydo=0.)
+                                              xdo=0., ydo=0.)
 
     yc, xc = ny, nx
     xc = jnp.where(nx%2==1, nx/2-0.5, nx/2)
@@ -86,7 +86,7 @@ def jax_model_scal_1d(DistrModel, FuncModel, disk_params, spf_params, flux_scali
     disk_params_jax = ScatteredLightDisk.init(distr_params, disk_params[3], disk_params[4],
                                               disk_params[0], disk_params[1], disk_params[2],
                                               nx=nx, ny=ny, distance = distance, omega =0., pxInArcsec=pxInArcsec,
-                                              flux_max=None, xdo=0., ydo=0.)
+                                              xdo=0., ydo=0.)
 
     yc, xc = ny, nx
     xc = jnp.where(nx%2==1, nx/2-0.5, nx/2)
@@ -121,7 +121,7 @@ def jax_model_1d(DistrModel, FuncModel, disk_params, spf_params, flux_scaling, h
     disk_params_jax = ScatteredLightDisk.init(distr_params, disk_params[3], disk_params[4],
                                               disk_params[0], disk_params[1], disk_params[2],
                                               nx=nx, ny=ny, distance = distance, omega =0., pxInArcsec=pxInArcsec,
-                                              flux_max=None, xdo=0., ydo=0.)
+                                              xdo=0., ydo=0.)
 
     yc, xc = ny, nx
     xc = jnp.where(nx%2==1, nx/2-0.5, nx/2).astype(int)
