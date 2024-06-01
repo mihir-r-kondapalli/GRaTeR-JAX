@@ -14,7 +14,7 @@ def jax_model(DistrModel, FuncModel, disk_params={'inclination': 0., 'position_a
                                    e=0., ksi0=ksi0, gamma=gamma, beta=beta, amin=0., dens_at_r0=1.)
     disk_params_jax = ScatteredLightDisk.init(distr_params, disk_params['inclination'], disk_params['position_angle'],
                                               disk_params['alpha_in'], disk_params['alpha_out'], disk_params['sma'],
-                                              nx=nx, ny=ny, distance = distance, itilt = 60., omega =0., pxInArcsec=pxInArcsec,
+                                              nx=nx, ny=ny, distance = distance, omega =0., pxInArcsec=pxInArcsec,
                                               flux_max=None, xdo=0., ydo=0.)
 
     yc, xc = ny, nx
@@ -48,7 +48,7 @@ def jax_model_scal(DistrModel, FuncModel, disk_params, spf_params,
                                    e=0., ksi0=ksi0, gamma=gamma, beta=beta, amin=0., dens_at_r0=1.)
     disk_params_jax = ScatteredLightDisk.init(distr_params, disk_params['inclination'], disk_params['position_angle'],
                                               disk_params['alpha_in'], disk_params['alpha_out'], disk_params['sma'],
-                                              nx=nx, ny=ny, distance = distance, itilt = 60., omega =0., pxInArcsec=pxInArcsec,
+                                              nx=nx, ny=ny, distance = distance, omega =0., pxInArcsec=pxInArcsec,
                                               flux_max=None, xdo=0., ydo=0.)
 
     yc, xc = ny, nx
@@ -85,7 +85,7 @@ def jax_model_scal_1d(DistrModel, FuncModel, disk_params, spf_params, flux_scali
                                    e=0., ksi0=ksi0, gamma=gamma, beta=beta, amin=0., dens_at_r0=1.)
     disk_params_jax = ScatteredLightDisk.init(distr_params, disk_params[3], disk_params[4],
                                               disk_params[0], disk_params[1], disk_params[2],
-                                              nx=nx, ny=ny, distance = distance, itilt = 60., omega =0., pxInArcsec=pxInArcsec,
+                                              nx=nx, ny=ny, distance = distance, omega =0., pxInArcsec=pxInArcsec,
                                               flux_max=None, xdo=0., ydo=0.)
 
     yc, xc = ny, nx
@@ -120,7 +120,7 @@ def jax_model_1d(DistrModel, FuncModel, disk_params, spf_params, flux_scaling, h
                                    e=0., ksi0=ksi0, gamma=gamma, beta=beta, amin=0., dens_at_r0=1.)
     disk_params_jax = ScatteredLightDisk.init(distr_params, disk_params[3], disk_params[4],
                                               disk_params[0], disk_params[1], disk_params[2],
-                                              nx=nx, ny=ny, distance = distance, itilt = 60., omega =0., pxInArcsec=pxInArcsec,
+                                              nx=nx, ny=ny, distance = distance, omega =0., pxInArcsec=pxInArcsec,
                                               flux_max=None, xdo=0., ydo=0.)
 
     yc, xc = ny, nx
