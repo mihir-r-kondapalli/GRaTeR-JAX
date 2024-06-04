@@ -108,19 +108,20 @@ class DustEllipticalDistribution2PowerLaws(Jax_class):
         """ Returns the particule volume density at r, theta, z
         """
         distr = cls.unpack_pars(distr_params)
-        radial_ratio = r/(distr["p"]/(1-distr["e"]*costheta))
-        den = (jnp.power(radial_ratio, -2*distr["ain"]) +
-               jnp.power(radial_ratio, -2*distr["aout"]))
-        radial_density_term = jnp.sqrt(2./den)*distr["dens_at_r0"]
-        
+
+        radial_ratio = r*(1-distr["e"]*costheta)/((distr["p"])+1e-8)
+
+        den = (jnp.power(jnp.abs(radial_ratio)+1e-8, -2*distr["ain"]) +
+               jnp.power(jnp.abs(radial_ratio)+1e-8, -2*distr["aout"]))
+        radial_density_term = jnp.sqrt(2./(den))*distr["dens_at_r0"]
         #if distr["pmin"] > 0:
         #    radial_density_term[r/(distr["pmin"]/(1-distr["e"]*costheta)) <= 1] = 0
         radial_density_term = jnp.where(distr["pmin"] > 0, 
-                                        jnp.where(r/(distr["pmin"]/(1-distr["e"]*costheta)) <= 1, 0., radial_density_term),
+                                        jnp.where(r*(1-distr["e"]*costheta)/((distr["p"])+1e-8) <= 1, 0., radial_density_term),
                                         radial_density_term)
 
         den2 = (distr["ksi0"]*jnp.power(radial_ratio, distr["beta"]))
-        vertical_density_term = jnp.exp(-jnp.power(jnp.abs(z)/den2, distr["gamma"]))
+        vertical_density_term = jnp.exp(-jnp.power(jnp.abs(z)/(den2+1e-8), distr["gamma"]))
         return radial_density_term*vertical_density_term
 
 class HenyeyGreenstein_SPF(Jax_class):
