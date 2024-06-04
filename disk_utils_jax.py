@@ -7,7 +7,7 @@ from functools import partial
 @partial(jax.jit, static_argnums=(0,1))
 def jax_model(DistrModel, FuncModel, disk_params={'inclination': 0., 'position_angle': 0., "alpha_in": 0., "alpha_out": 0.,
                                                   'sma': 0., 'flux_scaling': 0.},
-                  spf_params={'g1': 0.}, halfNbSlices=25, ksi0=3., gamma=2., beta=1., dstar=111.61,
+                  spf_params={'g': 0.}, halfNbSlices=25, ksi0=3., gamma=2., beta=1., dstar=111.61,
                   nx=140, ny=140, pixel_scale=0.063, n_nodes=6, pxInArcsec=0.01225, distance=50.):
 
     distr_params = DistrModel.init(accuracy=5.e-3, ain=disk_params['alpha_in'], aout=disk_params['alpha_out'], a=disk_params['sma'],
