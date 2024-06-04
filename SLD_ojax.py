@@ -152,18 +152,18 @@ class ScatteredLightDisk(Jax_class):
             # Dist and polar angles in the frame centered on the star position:
             # squared distance to the star, in AU^2
             d2star_vector = xd_vector**2+yd_vector**2+zd_vector**2
-            dstar_vector = jnp.sqrt(d2star_vector)  # distance to the star, in AU
+            dstar_vector = jnp.sqrt(d2star_vector + 1e-8)  # distance to the star, in AU
             # midplane distance to the star (r coordinate), in AU
-            rstar_vector = jnp.sqrt(xd_vector**2+yd_vector**2)
-            thetastar_vector = jnp.arctan2(yd_vector, xd_vector)
+            rstar_vector = jnp.sqrt(xd_vector**2+yd_vector**2+1e-8)
+            thetastar_vector = jnp.arctan2(yd_vector, xd_vector+1e-8)
             # Phase angles:
             cosphi_vector = (rstar_vector*disk["sini"]*jnp.sin(thetastar_vector) +
-                             zd_vector*disk["cosi"])/dstar_vector  # in radians
+                             zd_vector*disk["cosi"])/(dstar_vector+1e-8)  # in radians
             # Polar coordinates in the disk frame, and semi-major axis:
             # midplane distance to the disk center (r coordinate), in AU
-            r_vector = jnp.sqrt((xd_vector-disk["xdo"])**2+(yd_vector-disk["ydo"])**2)
+            r_vector = jnp.sqrt((xd_vector-disk["xdo"])**2+(yd_vector-disk["ydo"])**2+1e-8)
             # polar angle in radians between 0 and pi
-            theta_vector = jnp.arctan2(yd_vector-disk["ydo"], xd_vector-disk["xdo"])
+            theta_vector = jnp.arctan2(yd_vector-disk["ydo"], xd_vector-disk["xdo"]+1e-8)
 
             costheta_vector = jnp.cos(theta_vector-jnp.deg2rad(disk["omega"]))
             # Scattered light:
@@ -173,7 +173,7 @@ class ScatteredLightDisk(Jax_class):
                                                                zd_vector)
             phase_function = phase_func_cls.compute_phase_function_from_cosphi(phase_func_params, cosphi_vector)
             #image = np.ndarray((disk["ny"], disk["nx"]))
-            image = jnp.where(validPixel_map, rho_vector*phase_function/d2star_vector, 0)
+            image = jnp.where(validPixel_map, rho_vector*phase_function/(d2star_vector + 1e-8), 0)
             #limage[il, :, :] = image
             limage = limage.at[il,:,:].set(image)
 
