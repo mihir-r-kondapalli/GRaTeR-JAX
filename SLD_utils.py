@@ -2,6 +2,7 @@ import jax
 import jax.numpy as jnp
 from functools import partial
 import matplotlib.pyplot as plt
+from interpolated_univariate_spline import InterpolatedUnivariateSpline
 
 class Jax_class:
 
@@ -214,3 +215,59 @@ class DoubleHenyeyGreenstein_SPF(Jax_class):
             (1+p_dict["g2"]**2-2*p_dict["g2"]*cos_phi)**(3./2.)
         
         return hg1+hg2
+    
+
+# Uses 10 knots by default
+# Values must be cos(phi) not phi
+class InterpolatedSpline_SPF(Jax_class):
+    """
+    Implementation of a spline scattering phase function. Uses 10 knots by default, takes 10 y values as parameters.
+    Locations are fixed to linspace(0, pi, knots), pack_pars and init both return the spline model itself
+    """
+
+    param_names = {}
+
+    @classmethod
+    @partial(jax.jit, static_argnums=(0,))
+    def unpack_pars(cls, p_arr):
+        return p_arr
+
+    @classmethod
+    @partial(jax.jit, static_argnums=(0,2))
+    def pack_pars(cls, p_arr, knots=10):
+        """
+        This function takes a array of (knots) values and converts them into an InterpolatedUnivariateSpline model.
+        """    
+        
+        x_vals = jnp.cos(jnp.linspace(0, jnp.pi, knots))
+        y_vals = p_arr
+        return InterpolatedUnivariateSpline(x_vals, y_vals)
+
+    @classmethod
+    @partial(jax.jit, static_argnums=(0,2))
+    def init(cls, p_arr, knots=10):
+        """
+        """
+
+        x_vals = jnp.cos(jnp.linspace(0, jnp.pi, knots))
+        y_vals = p_arr
+        return InterpolatedUnivariateSpline(x_vals, y_vals)
+    
+    @classmethod
+    @partial(jax.jit, static_argnums=(0,))
+    def compute_phase_function_from_cosphi(cls, spline_model, cos_phi):
+        """
+        Compute the phase function at (a) specific scattering scattering
+        angle(s) phi. The argument is not phi but cos(phi) for optimization
+        reasons.
+
+        Parameters
+        ----------
+        spline_model : InterpolatedUnivariateSpline
+            spline model to represent scattering light phase function
+        cos_phi : float or array
+            cosine of the scattering angle(s) at which the scattering function
+            must be calculated.
+        """
+        
+        return spline_model(cos_phi)
