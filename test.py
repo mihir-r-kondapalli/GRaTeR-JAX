@@ -59,3 +59,5 @@ plt.show()
 plt.savefig('test.png')
 
 print('Time taken: ' + str(end-start))
+
+print(spline_func._compute_coeffs(x))
