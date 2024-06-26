@@ -2,9 +2,6 @@ import jax
 import jax.numpy as jnp
 from functools import partial
 import matplotlib.pyplot as plt
-from functools import partial
-from scipy.optimize import newton
-from scipy.interpolate import interp1d
 
 class Jax_class:
 
