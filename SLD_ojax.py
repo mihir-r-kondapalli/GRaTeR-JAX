@@ -188,3 +188,113 @@ class ScatteredLightDisk(Jax_class):
         #                                 jnp.nanmax(scattered_light_map))
             
         return scattered_light_map
+    
+
+    @classmethod
+    @partial(jax.jit, static_argnums=(0, 3, 4, 11))
+    def compute_scattered_light_jax_spline(cls, disk_params, distr_params, distr_cls, spline_model, x_vector, y_vector, scattered_light_map,
+                                    image, limage, tmp, halfNbSlices):
+        """
+        Computes the scattered light image of the disk.
+
+        Parameters
+        ----------
+        halfNbSlices : integer
+            half number of distances along the line of sight l
+        """
+
+        disk = cls.unpack_pars(disk_params)
+
+        distr = distr_cls.unpack_pars(distr_params)
+
+        #x_vector = (jnp.arange(0, disk["nx"]) - disk["xc"])*disk["pxInAU"]  # x axis in au
+        #y_vector = (jnp.arange(0, disk["ny"]) - disk["yc"])*disk["pxInAU"]  # y axis in au
+        
+        x_map_0PA, y_map_0PA = jnp.meshgrid(x_vector, y_vector)
+        # rotation to get the disk major axis properly oriented, x in AU
+        y_map = (disk["cospa"]*x_map_0PA + disk["sinpa"]*y_map_0PA)
+        # rotation to get the disk major axis properly oriented, y in AU
+        x_map = (-disk["sinpa"]*x_map_0PA + disk["cospa"]*y_map_0PA)
+
+        # dist along the line of sight to reach the disk midplane (z_D=0), AU:
+        lz0_map = y_map * jnp.tan(jnp.deg2rad(disk["itilt"]))
+        # dist to reach +zmax, AU:
+        lzp_map = distr["zmax"]/disk["cosi"] + \
+            lz0_map
+        # dist to reach -zmax, AU:
+        lzm_map = -distr["zmax"]/disk["cosi"] + \
+            lz0_map
+        dl_map = jnp.absolute(lzp_map-lzm_map)  # l range, in AU
+        # squared maximum l value to reach the outer disk radius, in AU^2:
+        lmax2 = distr["rmax"]**2 - \
+            (x_map**2+y_map**2)
+        # squared minimum l value to reach the inner disk radius, in AU^2:
+        lmin2 = (x_map**2+y_map**2)-disk["rmin"]**2
+        validPixel_map = (lmax2 > 0.) * (lmin2 > 0.)
+        lwidth = 100.  # control the distribution of distances along l
+        nbSlices = 2*halfNbSlices-1
+        # total number of distances
+        # along the line of sight
+
+        tmp = (jnp.exp(tmp*jnp.log(lwidth+1.) /
+                      (halfNbSlices-1.))-1.)/lwidth  # between 0 and 1
+        
+        ll = jnp.concatenate((-tmp[:0:-1], tmp))
+
+        # 1d array pre-calculated values, AU
+        ycs_vector = jnp.where(validPixel_map, disk["cosi"]*y_map, 0)
+        # 1d array pre-calculated values, AU
+        zsn_vector = jnp.where(validPixel_map, -disk["sini"]*y_map, 0)
+        xd_vector = jnp.where(validPixel_map, x_map, 0)  # x_disk, in AU
+
+        #limage = jnp.zeros([nbSlices, ny, nx])
+        #image = jnp.zeros((ny, nx))
+
+        for il in range(nbSlices):
+            # distance along the line of sight to reach the plane z
+
+            l_vector = jnp.where(validPixel_map, lz0_map + ll[il]*dl_map, 0)
+            #l_vector = lz0_map + ll[il]*dl_map
+
+            # rotation about x axis
+            yd_vector = ycs_vector + disk["sini"] * l_vector  # y_Disk in AU
+            zd_vector = zsn_vector + disk["cosi"] * l_vector  # z_Disk, in AU
+            # Dist and polar angles in the frame centered on the star position:
+            # squared distance to the star, in AU^2
+            d2star_vector = xd_vector**2+yd_vector**2+zd_vector**2
+            dstar_vector = jnp.sqrt(d2star_vector + 1e-8)  # distance to the star, in AU
+            # midplane distance to the star (r coordinate), in AU
+            rstar_vector = jnp.sqrt(xd_vector**2+yd_vector**2+1e-8)
+            thetastar_vector = jnp.arctan2(yd_vector, xd_vector+1e-8)
+            # Phase angles:
+            cosphi_vector = (rstar_vector*disk["sini"]*jnp.sin(thetastar_vector) +
+                             zd_vector*disk["cosi"])/(dstar_vector+1e-8)  # in radians
+            # Polar coordinates in the disk frame, and semi-major axis:
+            # midplane distance to the disk center (r coordinate), in AU
+            r_vector = jnp.sqrt((xd_vector-disk["xdo"])**2+(yd_vector-disk["ydo"])**2+1e-8)
+            # polar angle in radians between 0 and pi
+            theta_vector = jnp.arctan2(yd_vector-disk["ydo"], xd_vector-disk["xdo"]+1e-8)
+
+            costheta_vector = jnp.cos(theta_vector-jnp.deg2rad(disk["omega"]))
+            # Scattered light:
+            # volume density
+            rho_vector = distr_cls.density_cylindrical(distr_params, r_vector,
+                                                               costheta_vector,
+                                                               zd_vector)
+            phase_function = spline_model(cosphi_vector)
+            #image = np.ndarray((disk["ny"], disk["nx"]))
+            image = jnp.where(validPixel_map, rho_vector*phase_function/(d2star_vector + 1e-8), 0)
+            #limage[il, :, :] = image
+            limage = limage.at[il,:,:].set(image)
+
+        for il in range(1, nbSlices):
+            scattered_light_map += (ll[il]-ll[il-1]) * (limage[il-1, :, :] +
+                                                             limage[il, :, :])
+        scattered_light_map = jnp.where(validPixel_map, scattered_light_map * dl_map / 2. * disk["pxInAU"]**2, 0)
+
+        #ideally should check for valid pixel map
+        #if disk["flux_max"] is not None:
+        #    scattered_light_map = scattered_light_map * (disk["flux_max"] /
+        #                                 jnp.nanmax(scattered_light_map))
+            
+        return scattered_light_map
