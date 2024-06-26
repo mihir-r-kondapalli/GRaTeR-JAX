@@ -36,3 +36,11 @@ def log_likelihood_1d_pos_all_pars(disk_and_spf_params, DistrModel, FuncModel, f
     result = jnp.power((target_image - model_image), 2) / sigma2 + jnp.log(sigma2)
     result = jnp.where(jnp.isnan(result), 0, result)
     return 0.5 * jnp.sum(result)
+
+@partial(jax.jit, static_argnums=(1,2))
+def log_likelihood_1d_pos_all_pars_func(disk_and_spf_params, DistrModel, FuncModel, flux_scaling, target_image, err_map):
+    model_image = jax_model_all_1d(DistrModel, FuncModel, disk_and_spf_params[0:5], FuncModel.pack_pars(disk_and_spf_params[5:]), flux_scaling) # (y)
+    sigma2 = jnp.power(err_map, 2) 
+    result = jnp.power((target_image - model_image), 2) / sigma2 + jnp.log(sigma2)
+    result = jnp.where(jnp.isnan(result), 0, result)
+    return 0.5 * jnp.sum(result)
