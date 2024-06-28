@@ -4,11 +4,10 @@ from SLD_ojax import ScatteredLightDisk
 from SLD_utils import DustEllipticalDistribution2PowerLaws, DoubleHenyeyGreenstein_SPF
 from functools import partial
 
-@partial(jax.jit, static_argnums=(0,1,15))
-def jax_model(DistrModel, FuncModel, disk_params={'inclination': 0., 'position_angle': 0., "alpha_in": 0., "alpha_out": 0.,
-                                                  'sma': 0., 'flux_scaling': 0.},
-                  spf_params={'g': 0.}, halfNbSlices=25, ksi0=3., gamma=2., beta=1., dstar=111.61,
-                  nx=140, ny=140, pixel_scale=0.063, n_nodes=6, pxInArcsec=0.01225, distance=50., inc = 0):
+@partial(jax.jit, static_argnums=(0,1))
+def jax_model(DistrModel, FuncModel, disk_params, spf_params,
+                  halfNbSlices=25, ksi0=3., gamma=2., beta=1., dstar=111.61,
+                  nx=140, ny=140, pixel_scale=0.063, n_nodes=6, pxInArcsec=0.01225, distance=50.):
 
     distr_params = DistrModel.init(accuracy=5.e-3, ain=disk_params['alpha_in'], aout=disk_params['alpha_out'], a=disk_params['sma'],
                                    e=0., ksi0=ksi0, gamma=gamma, beta=beta, amin=0., dens_at_r0=1.)
@@ -40,7 +39,7 @@ def jax_model(DistrModel, FuncModel, disk_params={'inclination': 0., 'position_a
 
 
 # 0: alpha_in, 1: alpha_out, 2: sma, 3: inclination, 4: position_angle
-@partial(jax.jit, static_argnums=(0,1,16))
+@partial(jax.jit, static_argnums=(0,1))
 def jax_model_1d(DistrModel, FuncModel, disk_params, spf_params, flux_scaling, halfNbSlices=25, ksi0=3., gamma=2., beta=1.,
                  dstar=111.61, nx=140, ny=140, pixel_scale=0.063, n_nodes=6, pxInArcsec=0.01225, distance=50., inc = 0):
 
@@ -74,9 +73,9 @@ def jax_model_1d(DistrModel, FuncModel, disk_params, spf_params, flux_scaling, h
 
 
 # 0: alpha_in, 1: alpha_out, 2: sma, 3: inclination, 4: position_angle
-@partial(jax.jit, static_argnums=(0,1,16))
+@partial(jax.jit, static_argnums=(0,1))
 def jax_model_all_1d(DistrModel, FuncModel, disk_params, spf_params, flux_scaling, halfNbSlices=25, ksi0=3., gamma=2., beta=1.,
-                 dstar=111.61, nx=140, ny=140, pixel_scale=0.063, n_nodes=6, pxInArcsec=0.01225, distance=50., inc = 0):
+                 dstar=111.61, nx=140, ny=140, pixel_scale=0.063, n_nodes=6, pxInArcsec=0.01225, distance=50.):
 
     distr_params = DistrModel.init(accuracy=5.e-3, ain=disk_params[0], aout=disk_params[1], a=disk_params[2],
                                    e=0., ksi0=ksi0, gamma=gamma, beta=beta, amin=0., dens_at_r0=1.)

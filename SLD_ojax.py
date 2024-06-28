@@ -30,7 +30,7 @@ class ScatteredLightDisk(Jax_class):
     """
 
     # Jax Parameters
-    param_names = {
+    params = {
         "nx": 0, "ny": 0,
         "distance": 0.,
         "itilt": 0.,

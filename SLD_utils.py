@@ -7,7 +7,7 @@ from interpolated_map_spline import interpolate as interpolate_map
 
 class Jax_class:
 
-    param_names = {}
+    params = {}
 
     @classmethod
     @partial(jax.jit, static_argnums=(0,))
@@ -17,7 +17,7 @@ class Jax_class:
         dictionary with the parameter names as keys.
         """
         p_dict = {}
-        keys = list(cls.param_names.keys())
+        keys = list(cls.params.keys())
         i = 0
         for i in range(0, len(p_arr)):
             p_dict[keys[i]] = p_arr[i]
@@ -32,7 +32,7 @@ class Jax_class:
         where the order is set by the parameter name list defined on the class.
         """    
         p_arrs = []
-        for name in cls.param_names.keys():
+        for name in cls.params.keys():
             p_arrs.append(p_dict[name])
         return jnp.asarray(p_arrs)
 
@@ -41,7 +41,7 @@ class DustEllipticalDistribution2PowerLaws(Jax_class):
     """
     """
 
-    param_names = {'ain': 5., 'aout': -5., 'a': 60., 'e': 0., 'ksi0': 1.,'gamma': 2., 'beta': 1.,
+    params = {'ain': 5., 'aout': -5., 'a': 60., 'e': 0., 'ksi0': 1.,'gamma': 2., 'beta': 1.,
                         'amin': 0., 'dens_at_r0': 1., 'accuracy': 5.e-3, 'zmax': 0., "p": 0., "rmax": 0.,
                         'pmin': 0., "apeak": 0., "apeak_surface_density": 0., "itiltthreshold": 0.}
 
@@ -129,7 +129,7 @@ class HenyeyGreenstein_SPF(Jax_class):
     Greenstein function.
     """
 
-    param_names = {'g': 0.}
+    params = {'g': 0.3}
 
     @classmethod
     @partial(jax.jit, static_argnums=(0,))
@@ -178,7 +178,7 @@ class DoubleHenyeyGreenstein_SPF(Jax_class):
     Greenstein function.
     """
 
-    param_names = {'g1': 0.5, 'g2': -0.3, 'weight': 0.7}
+    params = {'g1': 0.5, 'g2': -0.3, 'weight': 0.7}
 
     @classmethod
     @partial(jax.jit, static_argnums=(0,))
@@ -226,7 +226,7 @@ class InterpolatedUnivariateSpline_SPF(Jax_class):
     Locations are fixed to linspace(0, pi, knots), pack_pars and init both return the spline model itself
     """
 
-    param_names = {}
+    params = jnp.full(10, 0.05)
 
     @classmethod
     @partial(jax.jit, static_argnums=(0,))
@@ -276,6 +276,7 @@ class InterpolatedUnivariateSpline_SPF(Jax_class):
     
 
 # Only works if input y values were from x values from 1 to -1
+# Inclination bounding does not work with this function yet
 # Uses 10 knots by default
 # Values must be cos(phi) not phi
 class InterpolatedMapSpline_SPF(Jax_class):
@@ -284,7 +285,7 @@ class InterpolatedMapSpline_SPF(Jax_class):
     Locations are fixed to linspace(0, pi, knots), pack_pars and init both return the spline model itself
     """
 
-    param_names = {}
+    params = jnp.full(10, 0.05)
 
     @classmethod
     @partial(jax.jit, static_argnums=(0,))
