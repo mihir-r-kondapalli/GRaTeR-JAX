@@ -3,6 +3,7 @@ import jax.numpy as jnp
 from functools import partial
 import matplotlib.pyplot as plt
 from interpolated_univariate_spline import InterpolatedUnivariateSpline
+from interpolated_map_spline import interpolate as interpolate_map
 
 class Jax_class:
 
@@ -219,7 +220,7 @@ class DoubleHenyeyGreenstein_SPF(Jax_class):
 
 # Uses 10 knots by default
 # Values must be cos(phi) not phi
-class InterpolatedSpline_SPF(Jax_class):
+class InterpolatedUnivariateSpline_SPF(Jax_class):
     """
     Implementation of a spline scattering phase function. Uses 10 knots by default, takes 10 y values as parameters.
     Locations are fixed to linspace(0, pi, knots), pack_pars and init both return the spline model itself
@@ -233,23 +234,24 @@ class InterpolatedSpline_SPF(Jax_class):
         return p_arr
 
     @classmethod
-    @partial(jax.jit, static_argnums=(0,2))
-    def pack_pars(cls, p_arr, knots=10):
+    @partial(jax.jit, static_argnums=(0,2,3))
+    def pack_pars(cls, p_arr, inc = 0, knots=10):
         """
         This function takes a array of (knots) values and converts them into an InterpolatedUnivariateSpline model.
+        Also has inclination bounds which help narrow the spline fit
         """    
         
-        x_vals = jnp.cos(jnp.linspace(0, jnp.pi, knots))
+        x_vals = jnp.linspace(jnp.cos(inc), jnp.cos(jnp.pi-inc), knots)
         y_vals = p_arr
         return InterpolatedUnivariateSpline(x_vals, y_vals)
 
     @classmethod
-    @partial(jax.jit, static_argnums=(0,2))
-    def init(cls, p_arr, knots=10):
+    @partial(jax.jit, static_argnums=(0,2,3))
+    def init(cls, p_arr, inc = 0, knots=10):
         """
         """
 
-        x_vals = jnp.cos(jnp.linspace(0, jnp.pi, knots))
+        x_vals = jnp.linspace(jnp.cos(inc), jnp.cos(jnp.pi-inc), knots)
         y_vals = p_arr
         return InterpolatedUnivariateSpline(x_vals, y_vals)
     
@@ -271,3 +273,72 @@ class InterpolatedSpline_SPF(Jax_class):
         """
         
         return spline_model(cos_phi)
+    
+
+# Only works if input y values were from x values from 1 to -1
+# Uses 10 knots by default
+# Values must be cos(phi) not phi
+class InterpolatedMapSpline_SPF(Jax_class):
+    """
+    Implementation of a spline scattering phase function. Uses 10 knots by default, takes 10 y values as parameters.
+    Locations are fixed to linspace(0, pi, knots), pack_pars and init both return the spline model itself
+    """
+
+    param_names = {}
+
+    @classmethod
+    @partial(jax.jit, static_argnums=(0,))
+    def unpack_pars(cls, p_arr):
+        return p_arr
+
+    @classmethod
+    @partial(jax.jit, static_argnums=(0,2,3,4))
+    def pack_pars(cls, p_arr, inc = 0, knots=10, precision = 1000):
+        """
+        This function takes a array of (knots) values and converts them into an InterpolatedUnivariateSpline model.
+        Also has inclination bounds which help narrow the spline fit
+        """    
+        
+        x_vals = jnp.linspace(jnp.cos(inc), jnp.cos(jnp.pi-inc), knots)
+        y_vals = p_arr
+        x_coords = jnp.linspace(jnp.cos(inc), jnp.cos(jnp.pi-inc), precision)
+        return interpolate_map(x_vals, y_vals, x_coords)
+
+        # Return y_values of spline fit along with inc (if inc was not 0)
+        #return jnp.concatenate([precision, inc, interpolate_map(x_vals, y_vals, x_coords)])
+
+    @classmethod
+    @partial(jax.jit, static_argnums=(0,2,3,4))
+    def init(cls, p_arr, inc = 0, knots=10, precision = 1000):
+        """
+        """
+
+        x_vals = jnp.linspace(jnp.cos(inc), jnp.cos(jnp.pi-inc), knots)
+        y_vals = p_arr
+        x_coords = jnp.linspace(jnp.cos(inc), jnp.cos(jnp.pi-inc), precision)
+        return interpolate_map(x_vals, y_vals, x_coords)
+
+        # Return y_values of spline fit along with inc (if inc is not 0)
+        #return jnp.concatenate([precision, inc, interpolate_map(x_vals, y_vals, x_coords)])
+    
+    @classmethod
+    @partial(jax.jit, static_argnums=(0,))
+    def compute_phase_function_from_cosphi(cls, arr, cos_phi, precision=1000):
+        """
+        Compute the phase function at (a) specific scattering scattering
+        angle(s) phi. The argument is not phi but cos(phi) for optimization
+        reasons.
+
+        Parameters
+        ----------
+        arr : jax array 2d
+            array of interpolated xs and ys
+        cos_phi : float or array
+            cosine of the scattering angle(s) at which the scattering function
+            must be calculated.
+        """
+
+        return jnp.take(arr, precision-1-((1+cos_phi)/2*precision).astype(jnp.int32))
+
+        # If inc is not 0
+        # return jnp.take(arr, [jnp.round((cos_phi-arr[0])*precision)+1])
