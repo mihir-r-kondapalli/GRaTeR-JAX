@@ -20,7 +20,7 @@ class MCMC_model():
 
     def _lnprob(self, theta):
         lp = self._lnprior(theta)
-        if not lp == np.inf:
+        if lp == -np.inf:
             return -np.inf
         return lp + self.fun(theta)
 
@@ -55,3 +55,56 @@ class MCMC_model():
         for theta in samples[np.random.randint(len(samples), size=100)]:
             plt.show(model(theta))
         plt.show()
+
+
+    # Autocorrelation Methods from Here
+    def auto_corr(self, chain_length = 50):
+        if (self.sampler == None):
+            raise Exception("Need to run model first!")
+        chain = self.sampler.get_chain()[:, :, 0].T
+
+        # Compute the estimators for a few different chain lengths
+        N = np.exp(np.linspace(np.log(100), np.log(chain.shape[1]), chain_length)).astype(int)
+        estims = np.empty(len(N))
+        for i, n in enumerate(N):
+            estims[i] = self._autocorr_new(chain[:, :n])
+        return estims
+
+    def _next_pow_two(self, n):
+        i = 1
+        while i < n:
+            i = i << 1
+        return i
+
+    def _autocorr_func_1d(self, x, norm=True):
+        x = np.atleast_1d(x)
+        if len(x.shape) != 1:
+            raise ValueError("invalid dimensions for 1D autocorrelation function")
+        n = self._next_pow_two(len(x))
+
+        # Compute the FFT and then (from that) the auto-correlation function
+        f = np.fft.fft(x - np.mean(x), n=2 * n)
+        acf = np.fft.ifft(f * np.conjugate(f))[: len(x)].real
+        acf /= 4 * n
+
+        # Optionally normalize
+        #if norm:
+        #    acf /= acf[0]
+
+        #return acf
+    
+    # Automated windowing procedure following Sokal (1989)
+    def _auto_window(self, taus, c):
+        m = np.arange(len(taus)) < c * taus
+        if np.any(m):
+            return np.argmin(m)
+        return len(taus) - 1
+
+    def _autocorr_new(self, y, c=5.0):
+        f = np.zeros(y.shape[1])
+        for yy in y:
+            f += self._autocorr_func_1d(yy)
+        f /= len(y)
+        taus = 2.0 * np.cumsum(f) - 1.0
+        window = self._auto_window(taus, c)
+        return taus[window]
