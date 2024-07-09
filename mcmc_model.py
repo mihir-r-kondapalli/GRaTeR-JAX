@@ -44,7 +44,8 @@ class MCMC_model():
     def show_corner_plot(self, labels, truths=None, show_titles=True, plot_datapoints=True, quantiles = [0.16, 0.5, 0.84]):
         if (self.sampler == None):
             raise Exception("Need to run model first!")
-        fig = corner.corner(self.sampler.flatchain,truths=truths, show_titles=show_titles,labels=labels,plot_datapoints=plot_datapoints,quantiles=quantiles)
+        fig = corner.corner(self.sampler.flatchain,truths=truths, show_titles=show_titles,labels=labels,
+                                plot_datapoints=plot_datapoints,quantiles=quantiles)
 
     def plot_results(self, model):
         if (self.sampler == None):

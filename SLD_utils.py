@@ -222,11 +222,11 @@ class DoubleHenyeyGreenstein_SPF(Jax_class):
 # Values must be cos(phi) not phi
 class InterpolatedUnivariateSpline_SPF(Jax_class):
     """
-    Implementation of a spline scattering phase function. Uses 10 knots by default, takes 10 y values as parameters.
-    Locations are fixed to linspace(0, pi, knots), pack_pars and init both return the spline model itself
+    Implementation of a spline scattering phase function. Uses 10 knots by default, takes knot y values as parameters.
+    Locations are fixed to the given knots, pack_pars and init both return the spline model itself
     """
 
-    params = jnp.full(10, 0.05)
+    params = jnp.ones(10)
 
     @classmethod
     @partial(jax.jit, static_argnums=(0,))
@@ -234,26 +234,24 @@ class InterpolatedUnivariateSpline_SPF(Jax_class):
         return p_arr
 
     @classmethod
-    @partial(jax.jit, static_argnums=(0,2,3))
-    def pack_pars(cls, p_arr, inc = 0, knots=10):
+    @partial(jax.jit, static_argnums=(0))
+    def pack_pars(cls, p_arr, knots=jnp.linspace(1, -1, 10)):
         """
         This function takes a array of (knots) values and converts them into an InterpolatedUnivariateSpline model.
         Also has inclination bounds which help narrow the spline fit
         """    
         
-        x_vals = jnp.linspace(jnp.cos(inc), jnp.cos(jnp.pi-inc), knots)
         y_vals = p_arr
-        return InterpolatedUnivariateSpline(x_vals, y_vals)
+        return InterpolatedUnivariateSpline(knots, y_vals)
 
     @classmethod
-    @partial(jax.jit, static_argnums=(0,2,3))
-    def init(cls, p_arr, inc = 0, knots=10):
+    @partial(jax.jit, static_argnums=(0))
+    def init(cls, p_arr, knots=jnp.linspace(1, -1, 10)):
         """
         """
 
-        x_vals = jnp.linspace(jnp.cos(inc), jnp.cos(jnp.pi-inc), knots)
         y_vals = p_arr
-        return InterpolatedUnivariateSpline(x_vals, y_vals)
+        return InterpolatedUnivariateSpline(knots, y_vals)
     
     @classmethod
     @partial(jax.jit, static_argnums=(0,))
@@ -285,7 +283,7 @@ class InterpolatedMapSpline_SPF(Jax_class):
     Locations are fixed to linspace(0, pi, knots), pack_pars and init both return the spline model itself
     """
 
-    params = jnp.full(10, 0.05)
+    params = jnp.ones(10)
 
     @classmethod
     @partial(jax.jit, static_argnums=(0,))
@@ -293,31 +291,29 @@ class InterpolatedMapSpline_SPF(Jax_class):
         return p_arr
 
     @classmethod
-    @partial(jax.jit, static_argnums=(0,2,3,4))
-    def pack_pars(cls, p_arr, inc = 0, knots=10, precision = 1000):
+    @partial(jax.jit, static_argnums=(0,3))
+    def pack_pars(cls, p_arr, knots=jnp.linspace(1, -1, 10), precision = 1000):
         """
         This function takes a array of (knots) values and converts them into an InterpolatedUnivariateSpline model.
         Also has inclination bounds which help narrow the spline fit
         """    
         
-        x_vals = jnp.linspace(jnp.cos(inc), jnp.cos(jnp.pi-inc), knots)
         y_vals = p_arr
-        x_coords = jnp.linspace(jnp.cos(inc), jnp.cos(jnp.pi-inc), precision)
-        return interpolate_map(x_vals, y_vals, x_coords)
+        x_coords = jnp.linspace(1, knots[jnp.size(knots)-1], precision)
+        return interpolate_map(knots, y_vals, x_coords)
 
         # Return y_values of spline fit along with inc (if inc was not 0)
         #return jnp.concatenate([precision, inc, interpolate_map(x_vals, y_vals, x_coords)])
 
     @classmethod
-    @partial(jax.jit, static_argnums=(0,2,3,4))
-    def init(cls, p_arr, inc = 0, knots=10, precision = 1000):
+    @partial(jax.jit, static_argnums=(0,3))
+    def init(cls, p_arr, knots=jnp.linspace(1, -1, 10), precision = 1000):
         """
         """
 
-        x_vals = jnp.linspace(jnp.cos(inc), jnp.cos(jnp.pi-inc), knots)
         y_vals = p_arr
-        x_coords = jnp.linspace(jnp.cos(inc), jnp.cos(jnp.pi-inc), precision)
-        return interpolate_map(x_vals, y_vals, x_coords)
+        x_coords = jnp.linspace(1, -1, precision)
+        return interpolate_map(knots, y_vals, x_coords)
 
         # Return y_values of spline fit along with inc (if inc is not 0)
         #return jnp.concatenate([precision, inc, interpolate_map(x_vals, y_vals, x_coords)])
@@ -343,3 +339,29 @@ class InterpolatedMapSpline_SPF(Jax_class):
 
         # If inc is not 0
         # return jnp.take(arr, [jnp.round((cos_phi-arr[0])*precision)+1])
+
+
+class GAUSSIAN_PSF(Jax_class):
+
+    params = {
+        "amplitude": 0,
+        "theta": 0,
+        "offset": 0
+    }
+
+    @classmethod
+    @partial(jax.jit, static_argnums=(0,))
+    def init(cls, p_dict):
+        return GAUSSIAN_PSF.pack_pars(p_dict)
+
+    #define model function and pass independant variables x and y as a list
+    @classmethod
+    @partial(jax.jit, static_argnums=(0,3,4,5))
+    def generate(cls, pos, psf_pars, FWHM = 6., xo = 0., yo = 0.):
+        sigma = FWHM / 2.355
+        psf_dict = GAUSSIAN_PSF.unpack_pars(psf_pars)
+        a = (jnp.cos(psf_dict["theta"])**2)/(2*sigma**2) + (jnp.sin(psf_dict["theta"])**2)/(2*sigma**2)
+        b = -(jnp.sin(2*psf_dict["theta"]))/(4*sigma**2) + (jnp.sin(2*psf_dict["theta"]))/(4*sigma**2)
+        c = (jnp.sin(psf_dict["theta"])**2)/(2*sigma**2) + (jnp.cos(psf_dict["theta"])**2)/(2*sigma**2)
+        return psf_dict["offset"] + psf_dict["amplitude"]*jnp.exp( - (a*((pos[0]-xo)**2) + 2*b*(pos[0]-xo)
+                                                                      *(pos[1]-yo) + c*((pos[1]-yo)**2)))
