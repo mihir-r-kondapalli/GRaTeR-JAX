@@ -59,7 +59,7 @@ def log_likelihood_1d_pos_all_pars(disk_and_spf_params, DistrModel, FuncModel, f
 # This method is exclusively for spline spfs
 @partial(jax.jit, static_argnums=(1,2))
 def log_likelihood_1d_pos_all_pars_spline(disk_and_spf_params, DistrModel, FuncModel, flux_scaling, target_image, err_map,
-                                            knots = jnp.linspace(1,-1,10)):
+                                            knots = jnp.linspace(1,-1,6)):
     model_image = jax_model_all_1d(DistrModel, FuncModel, disk_and_spf_params[0:5], FuncModel.pack_pars(disk_and_spf_params[5:],
                                     knots=knots), flux_scaling) # (y)
     sigma2 = jnp.power(err_map, 2)
@@ -73,7 +73,7 @@ def log_likelihood_1d_pos_all_pars_spline(disk_and_spf_params, DistrModel, FuncM
 # This method is exclusively for spline spfs
 @partial(jax.jit, static_argnums=(2,3))
 def log_likelihood_1d_pos_spline(disk_params, spf_params, DistrModel, FuncModel, flux_scaling, target_image, err_map,
-                                            knots = jnp.linspace(1,-1,10)):
+                                            knots = jnp.linspace(1,-1,6)):
     model_image = jax_model_all_1d(DistrModel, FuncModel, disk_params, FuncModel.pack_pars(spf_params, knots=knots), flux_scaling) # (y)
     sigma2 = jnp.power(err_map, 2)
     result = jnp.power((target_image - model_image), 2) / sigma2 + jnp.log(sigma2)

@@ -3,7 +3,6 @@ import jax.numpy as jnp
 from functools import partial
 import matplotlib.pyplot as plt
 from interpolated_univariate_spline import InterpolatedUnivariateSpline
-from interpolated_map_spline import interpolate as interpolate_map
 
 class Jax_class:
 
@@ -222,11 +221,11 @@ class DoubleHenyeyGreenstein_SPF(Jax_class):
 # Values must be cos(phi) not phi
 class InterpolatedUnivariateSpline_SPF(Jax_class):
     """
-    Implementation of a spline scattering phase function. Uses 10 knots by default, takes knot y values as parameters.
+    Implementation of a spline scattering phase function. Uses 6 knots by default, takes knot y values as parameters.
     Locations are fixed to the given knots, pack_pars and init both return the spline model itself
     """
 
-    params = jnp.ones(10)
+    params = jnp.ones(6)
 
     @classmethod
     @partial(jax.jit, static_argnums=(0,))
@@ -235,7 +234,7 @@ class InterpolatedUnivariateSpline_SPF(Jax_class):
 
     @classmethod
     @partial(jax.jit, static_argnums=(0))
-    def pack_pars(cls, p_arr, knots=jnp.linspace(1, -1, 10)):
+    def pack_pars(cls, p_arr, knots=jnp.linspace(1, -1, 6)):
         """
         This function takes a array of (knots) values and converts them into an InterpolatedUnivariateSpline model.
         Also has inclination bounds which help narrow the spline fit
@@ -246,7 +245,7 @@ class InterpolatedUnivariateSpline_SPF(Jax_class):
 
     @classmethod
     @partial(jax.jit, static_argnums=(0))
-    def init(cls, p_arr, knots=jnp.linspace(1, -1, 10)):
+    def init(cls, p_arr, knots=jnp.linspace(1, -1, 6)):
         """
         """
 
@@ -272,74 +271,6 @@ class InterpolatedUnivariateSpline_SPF(Jax_class):
         
         return spline_model(cos_phi)
     
-
-# Only works if input y values were from x values from 1 to -1
-# Inclination bounding does not work with this function yet
-# Uses 10 knots by default
-# Values must be cos(phi) not phi
-class InterpolatedMapSpline_SPF(Jax_class):
-    """
-    Implementation of a spline scattering phase function. Uses 10 knots by default, takes 10 y values as parameters.
-    Locations are fixed to linspace(0, pi, knots), pack_pars and init both return the spline model itself
-    """
-
-    params = jnp.ones(10)
-
-    @classmethod
-    @partial(jax.jit, static_argnums=(0,))
-    def unpack_pars(cls, p_arr):
-        return p_arr
-
-    @classmethod
-    @partial(jax.jit, static_argnums=(0,3))
-    def pack_pars(cls, p_arr, knots=jnp.linspace(1, -1, 10), precision = 1000):
-        """
-        This function takes a array of (knots) values and converts them into an InterpolatedUnivariateSpline model.
-        Also has inclination bounds which help narrow the spline fit
-        """    
-        
-        y_vals = p_arr
-        x_coords = jnp.linspace(1, knots[jnp.size(knots)-1], precision)
-        return interpolate_map(knots, y_vals, x_coords)
-
-        # Return y_values of spline fit along with inc (if inc was not 0)
-        #return jnp.concatenate([precision, inc, interpolate_map(x_vals, y_vals, x_coords)])
-
-    @classmethod
-    @partial(jax.jit, static_argnums=(0,3))
-    def init(cls, p_arr, knots=jnp.linspace(1, -1, 10), precision = 1000):
-        """
-        """
-
-        y_vals = p_arr
-        x_coords = jnp.linspace(1, -1, precision)
-        return interpolate_map(knots, y_vals, x_coords)
-
-        # Return y_values of spline fit along with inc (if inc is not 0)
-        #return jnp.concatenate([precision, inc, interpolate_map(x_vals, y_vals, x_coords)])
-    
-    @classmethod
-    @partial(jax.jit, static_argnums=(0,))
-    def compute_phase_function_from_cosphi(cls, arr, cos_phi, precision=1000):
-        """
-        Compute the phase function at (a) specific scattering scattering
-        angle(s) phi. The argument is not phi but cos(phi) for optimization
-        reasons.
-
-        Parameters
-        ----------
-        arr : jax array 2d
-            array of interpolated xs and ys
-        cos_phi : float or array
-            cosine of the scattering angle(s) at which the scattering function
-            must be calculated.
-        """
-
-        return jnp.take(arr, precision-1-((1+cos_phi)/2*precision).astype(jnp.int32))
-
-        # If inc is not 0
-        # return jnp.take(arr, [jnp.round((cos_phi-arr[0])*precision)+1])
-
 
 class GAUSSIAN_PSF(Jax_class):
 
