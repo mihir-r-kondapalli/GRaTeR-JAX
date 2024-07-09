@@ -36,6 +36,7 @@ def jax_model(DistrModel, FuncModel, disk_params, spf_params,
                                                                   x_vector, y_vector, scattered_light_map, image, limage, tmp,
                                                                   halfNbSlices)
     
+    # Hi
     return disk_params['flux_scaling']*scattered_light_image
 
 
