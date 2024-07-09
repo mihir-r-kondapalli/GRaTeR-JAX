@@ -107,7 +107,7 @@ def jax_model_all_1d(DistrModel, FuncModel, disk_params, spf_params, flux_scalin
 @partial(jax.jit, static_argnums=(0,1))
 def jax_model_spline(DistrModel, FuncModel, disk_params, spf_params,
                   halfNbSlices=25, ksi0=3., gamma=2., beta=1., dstar=111.61,
-                  nx=140, ny=140, pixel_scale=0.063, n_nodes=6, pxInArcsec=0.01225, distance=50., knots=jnp.linspace(1,-1,10)):
+                  nx=140, ny=140, pixel_scale=0.063, n_nodes=6, pxInArcsec=0.01225, distance=50., knots=jnp.linspace(1,-1,6)):
 
     distr_params = DistrModel.init(accuracy=5.e-3, ain=disk_params['alpha_in'], aout=disk_params['alpha_out'], a=disk_params['sma'],
                                    e=0., ksi0=ksi0, gamma=gamma, beta=beta, amin=0., dens_at_r0=1.)
