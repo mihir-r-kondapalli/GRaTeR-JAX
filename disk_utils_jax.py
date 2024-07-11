@@ -38,7 +38,7 @@ def jax_model(DistrModel, FuncModel, disk_params, spf_params, PSFModel = None,
 
     if(PSFModel!=None):
         psf_image = PSFModel.generate(jnp.meshgrid(x_vector, y_vector))
-        disk_image_psf = jss.convolve2d(scattered_light_image, psf_image)[70:210:, 70:210:]
+        disk_image_psf = jss.convolve2d(scattered_light_image, psf_image, mode='same')
     
     return disk_params['flux_scaling']*scattered_light_image
 
@@ -77,7 +77,7 @@ def jax_model_1d(DistrModel, FuncModel, disk_params, spf_params, flux_scaling, P
     
     if(PSFModel!=None):
         psf_image = PSFModel.generate(jnp.meshgrid(x_vector, y_vector))
-        scattered_light_image = jss.convolve2d(scattered_light_image, psf_image)[70:210:, 70:210:]
+        scattered_light_image = jss.convolve2d(scattered_light_image, psf_image, mode='same')
 
     return flux_scaling*scattered_light_image
 
@@ -114,7 +114,7 @@ def jax_model_all_1d(DistrModel, FuncModel, disk_params, spf_params, flux_scalin
 
     if(PSFModel!=None):
         psf_image = PSFModel.generate(jnp.meshgrid(x_vector, y_vector))
-        scattered_light_image = jss.convolve2d(scattered_light_image, psf_image)[70:210:, 70:210:]
+        scattered_light_image = jss.convolve2d(scattered_light_image, psf_image, mode='same')
     
     return flux_scaling*scattered_light_image
 
@@ -152,7 +152,7 @@ def jax_model_spline(DistrModel, FuncModel, disk_params, spf_params, PSFModel = 
 
     if(PSFModel!=None):
         psf_image = PSFModel.generate(jnp.meshgrid(x_vector, y_vector))
-        scattered_light_image = jss.convolve2d(scattered_light_image, psf_image)[70:210:, 70:210:]
+        scattered_light_image = jss.convolve2d(scattered_light_image, psf_image, mode='same')
     
     return disk_params['flux_scaling']*scattered_light_image
 
@@ -186,6 +186,6 @@ def jax_model_all_1d_cent(DistrModel, FuncModel, disk_params, spf_params, flux_s
 
     if(PSFModel!=None):
         psf_image = PSFModel.generate(jnp.meshgrid(x_vector, y_vector))
-        scattered_light_image = jss.convolve2d(scattered_light_image, psf_image)[70:210:, 70:210:]
+        scattered_light_image = jss.convolve2d(scattered_light_image, psf_image, mode='same')
     
     return flux_scaling*scattered_light_image
