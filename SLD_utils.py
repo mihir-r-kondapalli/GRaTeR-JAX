@@ -274,25 +274,13 @@ class InterpolatedUnivariateSpline_SPF(Jax_class):
 
 class GAUSSIAN_PSF(Jax_class):
 
-    params = {
-        "amplitude": 0,
-        "theta": 0,
-        "offset": 0
-    }
-
-    @classmethod
-    @partial(jax.jit, static_argnums=(0,))
-    def init(cls, p_dict):
-        return GAUSSIAN_PSF.pack_pars(p_dict)
-
     #define model function and pass independant variables x and y as a list
     @classmethod
-    @partial(jax.jit, static_argnums=(0,3,4,5))
-    def generate(cls, pos, psf_pars, FWHM = 6., xo = 0., yo = 0.):
+    @partial(jax.jit, static_argnums=(0,2,3,4,5,6,7))
+    def generate(cls, pos, FWHM = 3, xo = 0., yo = 0., theta=0, offset=0, amplitude=1):
         sigma = FWHM / 2.355
-        psf_dict = GAUSSIAN_PSF.unpack_pars(psf_pars)
-        a = (jnp.cos(psf_dict["theta"])**2)/(2*sigma**2) + (jnp.sin(psf_dict["theta"])**2)/(2*sigma**2)
-        b = -(jnp.sin(2*psf_dict["theta"]))/(4*sigma**2) + (jnp.sin(2*psf_dict["theta"]))/(4*sigma**2)
-        c = (jnp.sin(psf_dict["theta"])**2)/(2*sigma**2) + (jnp.cos(psf_dict["theta"])**2)/(2*sigma**2)
-        return psf_dict["offset"] + psf_dict["amplitude"]*jnp.exp( - (a*((pos[0]-xo)**2) + 2*b*(pos[0]-xo)
+        a = (jnp.cos(theta)**2)/(2*sigma**2) + (jnp.sin(theta)**2)/(2*sigma**2)
+        b = -(jnp.sin(2*theta))/(4*sigma**2) + (jnp.sin(2*theta))/(4*sigma**2)
+        c = (jnp.sin(theta)**2)/(2*sigma**2) + (jnp.cos(theta)**2)/(2*sigma**2)
+        return offset + amplitude*jnp.exp( - (a*((pos[0]-xo)**2) + 2*b*(pos[0]-xo)
                                                                       *(pos[1]-yo) + c*((pos[1]-yo)**2)))
