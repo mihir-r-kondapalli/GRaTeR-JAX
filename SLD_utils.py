@@ -91,8 +91,8 @@ class DustEllipticalDistribution2PowerLaws(Jax_class):
         p_dict["rmax"] = p_dict["a"]*p_dict["accuracy"]**(1/p_dict["aout"])
         p_dict["apeak"] = p_dict["a"] * jnp.power(-p_dict["ain"]/p_dict["aout"],
                                         1./(2.*(p_dict["ain"]-p_dict["aout"])))
-        Gamma_in = p_dict["ain"]+p_dict["beta"]
-        Gamma_out = p_dict["aout"]+p_dict["beta"]
+        Gamma_in = jnp.abs(p_dict["ain"]+p_dict["beta"] + 1e-8)
+        Gamma_out = -jnp.abs(p_dict["aout"]+p_dict["beta"] + 1e-8)
         p_dict["apeak_surface_density"] = p_dict["a"] * jnp.power(-Gamma_in/Gamma_out,
                                                         1./(2.*(Gamma_in-Gamma_out)))
         # the above formula comes from Augereau et al. 1999.
@@ -118,8 +118,8 @@ class DustEllipticalDistribution2PowerLaws(Jax_class):
                                         jnp.where(r*(1-distr["e"]*costheta)/((distr["p"])+1e-8) <= 1, 0., radial_density_term),
                                         radial_density_term)
 
-        den2 = (distr["ksi0"]*jnp.power(radial_ratio, distr["beta"]))
-        vertical_density_term = jnp.exp(-jnp.power(jnp.abs(z)/(den2+1e-8), distr["gamma"]))
+        den2 = distr["ksi0"]*jnp.power(jnp.abs(radial_ratio+1e-8), distr["beta"]) + 1e-8
+        vertical_density_term = jnp.exp(-jnp.power((jnp.abs(z)+1e-8)/(jnp.abs(den2)), distr["gamma"]))
         return radial_density_term*vertical_density_term
 
 class HenyeyGreenstein_SPF(Jax_class):

@@ -1,7 +1,7 @@
 import jax
 import jax.numpy as jnp
 import numpy as np
-from disk_utils_jax import jax_model, jax_model_1d, jax_model_all_1d, jax_model_all_1d_cent
+from disk_utils_jax import jax_model, jax_model_1d, jax_model_all_1d, jax_model_all_1d_cent, jax_model_all_1d_full
 from functools import partial
 
 
@@ -86,21 +86,29 @@ def log_likelihood_1d_pos_spline(disk_params, spf_params, DistrModel, FuncModel,
     return 0.5 * jnp.sum(result)
 
 
+# Basically log_likelihood_1d_pos_all_pars_spline but including cent as the first two values in the parameter array
+@partial(jax.jit, static_argnums=(1,2,7))
+def log_likelihood_1d_pos_cent(params, DistrModel, FuncModel, flux_scaling, target_image, err_map,
+                                            knots = jnp.linspace(1,-1,6), PSFModel = None, **kwargs):
+    model_image = jax_model_all_1d_cent(DistrModel, FuncModel, params[0], params[1], params[2:7], FuncModel.pack_pars(params[7:],
+                                    knots=knots), flux_scaling, PSFModel=PSFModel, **kwargs)
+    sigma2 = jnp.power(err_map, 2)
+    result = jnp.power((target_image - model_image), 2) / sigma2 + jnp.log(sigma2)
+    result = jnp.where(jnp.isnan(result), 0, result)
+    return 0.5 * jnp.sum(result)
+
+
 # Computes the error between the target_image and a disk generated from the parameters (all_params is a jax array)
-# 0: alpha_in, 1: alpha_out, 2: sma, 3: inclination, 4: position_angle, 5: xc, 6: yc, 7: ksi, 8: gamma, 9: beta
-# 10 onwards is spline parameters
+# 0: alpha_in, 1: alpha_out, 2: sma, 3: inclination, 4: position_angle, 5: xc, 6: yc, 7: e, 8: ksi, 9: gamma, 10: beta
+# 11 onwards is spline parameters
 # pxInArcsec and distance are important kwargs to include
 # Returns a positive number instead of negative number for future use
 # This method is exclusively for spline spfs
 @partial(jax.jit, static_argnums=(1,2,7))
-def log_likelihood_1d_full_opt(all_params, DistrModel,
-                                               FuncModel, flux_scaling, target_image, err_map,
+def log_likelihood_1d_full_opt(all_params, DistrModel, FuncModel, flux_scaling, target_image, err_map,
                                                knots = jnp.linspace(1,-1,6), PSFModel = None, **kwargs):
-    model_image = jax_model_all_1d_cent(DistrModel, FuncModel, all_params[0:5],
-                                        FuncModel.pack_pars(all_params[10:],
-                                    knots=knots), flux_scaling, PSFModel=PSFModel, xc=all_params[5],
-                                    yc = all_params[6], ksi0=all_params[7], gamma=all_params[8],
-                                    beta= all_params[9], **kwargs) # (y)
+    model_image = jax_model_all_1d_full(DistrModel, FuncModel, all_params[0:11], 
+                                        FuncModel.pack_pars(all_params[11:], knots=knots), flux_scaling, PSFModel=PSFModel, **kwargs) # (y)
     sigma2 = jnp.power(err_map, 2)
     result = jnp.where(err_map > 0, jnp.power((target_image - model_image), 2) / (sigma2+1e-8) + jnp.log(sigma2+1e-8), 0)
     result = jnp.where(jnp.isnan(result), 0, result)
