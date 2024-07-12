@@ -3,11 +3,15 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 import matplotlib.pyplot as plt
-from regression import log_likelihood_1d_pos_all_pars_spline
+from regression import log_likelihood_1d_full_opt
 from SLD_utils import *
 from disk_utils_jax import jax_model_1d
 from optimize import quick_optimize, quick_image
 from scipy.optimize import minimize
+
+import os
+os.environ['XLA_PYTHON_CLIENT_MEM_FRACTION'] = '0.15'
+jax.config.update("jax_enable_x64", True)
 
 # Creating error map
 def create_circular_err_map(image_shape, iradius, oradius, noise_level):
@@ -18,29 +22,6 @@ def create_circular_err_map(image_shape, iradius, oradius, noise_level):
     err_map = jnp.where(distance <= oradius, noise_level, 0)
     err_map = jnp.where(distance >= iradius, err_map, 0)
     return err_map
-
-
-@jax.jit
-def shift_center(img, center, new_center=None, flipx=False, astr_hdr=None):
-    #create the coordinate system of the image to manipulate for the transform
-    dims = img.shape
-    x, y = jnp.meshgrid(jnp.arange(dims[1], dtype=jnp.float32), jnp.arange(dims[0], dtype=jnp.float32))
-
-    #if necessary, move coordinates to new center
-    if new_center is not None:
-        dx = new_center[0] - center[0]
-        dy = new_center[1] - center[1]
-        x -= dx
-        y -= dy
-
-    #flip x if needed to get East left of North
-    if flipx is True:
-        x = center[0] - (x - center[0])
-
-    # resampled_img = jax_pyklip_nan_map_coordinates_2d(img, yp, xp)
-    resampled_img = jax.scipy.ndimage.map_coordinates(jnp.copy(img), jnp.array([y, x]),order=1,cval = 0.)
-
-    return resampled_img
 
 def process_image(image, scale_factor=1, offset=1):
     scaled_image = (image[::scale_factor, ::scale_factor])[1::, 1::]
@@ -57,38 +38,32 @@ def process_image(image, scale_factor=1, offset=1):
 hdul = fits.open("Fits/hr4796a_H_pol.fits")
 target_image = process_image(hdul['SCI'].data[1,:,:])
 
+from optimize import quick_optimize_full_opt, quick_image_full_opt
 
-# Parameters
-disk_params = {}
-disk_params['inclination'] = 40. #In degrees
-disk_params['position_angle'] = 50. #In Degrees
-disk_params['alpha_in'] = 8. #The inner power law
-disk_params['alpha_out'] = -5. #The outer power law
-disk_params['flux_scaling'] = 1e6
-disk_params['sma'] = 30. #This is the semi-major axis of the model in astronomical units. 
-#To get this in pixels, divide by the distance to the star, to get it in arcseconds. To get it in pixeks, divide by the pixel scale.
+jax.config.update("jax_debug_nans", True)
 
-disk_params_1d = np.array([disk_params['alpha_in'], disk_params['alpha_out'], disk_params['sma'], disk_params['inclination'],
-                           disk_params['position_angle']])
-spline_params_1d= jnp.full(6, 0.05)   # random knot y-values
-all_pars_spline = jnp.concatenate([disk_params_1d, spline_params_1d])
-
-err_map = create_circular_err_map(target_image.shape, 12, 83, 5)
+err_map = create_circular_err_map(target_image.shape, 12, 83, 15)
 
 
-ll = lambda x, y: log_likelihood_1d_pos_all_pars_spline(x, DustEllipticalDistribution2PowerLaws, InterpolatedUnivariateSpline_SPF, 
-                        disk_params['flux_scaling'], y, err_map, PSFModel=GAUSSIAN_PSF, pxInArcsec=0.01414)
+init_knot_guess = DoubleHenyeyGreenstein_SPF.compute_phase_function_from_cosphi([0.5, 0.5, 0.5], jnp.linspace(1,-1,6))
+init_disk_guess = jnp.array([5., -5., 45., 45, 45])
+init_cent_guess = jnp.array([70., 70.])
+distr_guess = jnp.array([0, 3, 2, 1])
+init_guess = jnp.concatenate([init_disk_guess, init_cent_guess, distr_guess, init_knot_guess])
 
-def likelihood_image_shift(pars):
-    return ll(pars[2:], shift_center(target_image, (70,70), new_center=(pars[0], pars[1])))
+llp = lambda x: log_likelihood_1d_full_opt(x, 
+                    DustEllipticalDistribution2PowerLaws, InterpolatedUnivariateSpline_SPF, 
+                    1e6, target_image, err_map, PSFModel = GAUSSIAN_PSF, pxInArcsec=0.01414, distance = 70.77)
 
-all_pars_cent = jnp.concatenate([jnp.array([70, 70]), all_pars_spline])
+grad_func = jax.grad(llp)
+print(grad_func(init_guess))
 
-print("hi")
-min_pars = minimize(likelihood_image_shift, all_pars_cent)
-print("hi")
-print(min_pars)
-cent_image = shift_center(quick_image(min_pars.x[2:], PSFModel=GAUSSIAN_PSF), (70,70), new_center=(min_pars.x[0], min_pars.x[1]))
+
+
+soln = quick_optimize_full_opt(target_image, err_map, method = None, iters = 3000, PSFModel=GAUSSIAN_PSF, pxInArcsec=0.01414, distance = 70.77)
+print(soln)
+
+cent_image = quick_image_full_opt(soln, PSFModel = GAUSSIAN_PSF, pxInArcsec=0.01414, distance = 70.77)
 
 fig, axes = plt.subplots(1,3, figsize=(20,10))
 
@@ -97,12 +72,11 @@ axes[0].set_title("Original Image")
 plt.colorbar(im, ax=axes[0], shrink=0.75)
 
 im = axes[1].imshow(cent_image, origin='lower', cmap='inferno')
-axes[1].set_title("Center Image")
+axes[1].set_title("Fitted Disk")
 plt.colorbar(im, ax=axes[1], shrink=0.75)
 
 im = axes[2].imshow(target_image-cent_image, origin='lower', cmap='inferno')
-axes[2].set_title("Final Image - Center Image")
+axes[2].set_title("Final Image - Fitted Disk")
 plt.colorbar(im, ax=axes[2], shrink=0.75)
-
 
 fig.savefig('output.png')
