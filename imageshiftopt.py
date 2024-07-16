@@ -5,12 +5,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 from regression import log_likelihood_1d_full_opt
 from SLD_utils import *
-from disk_utils_jax import jax_model_1d
+from disk_utils_jax import jax_model_all_1d_full
 from optimize import quick_optimize, quick_image
 from scipy.optimize import minimize
 
 import os
-os.environ['XLA_PYTHON_CLIENT_MEM_FRACTION'] = '0.15'
+os.environ['XLA_PYTHON_CLIENT_MEM_FRACTION'] = '0.20'
 jax.config.update("jax_enable_x64", True)
 
 # Creating error map
@@ -42,7 +42,7 @@ from optimize import quick_optimize_full_opt, quick_image_full_opt
 
 jax.config.update("jax_debug_nans", True)
 
-err_map = create_circular_err_map(target_image.shape, 12, 83, 15)
+err_map = create_circular_err_map(target_image.shape, 12, 83, 17)
 
 
 init_knot_guess = DoubleHenyeyGreenstein_SPF.compute_phase_function_from_cosphi([0.5, 0.5, 0.5], jnp.linspace(1,-1,6))
@@ -53,17 +53,13 @@ init_guess = jnp.concatenate([init_disk_guess, init_cent_guess, distr_guess, ini
 
 llp = lambda x: log_likelihood_1d_full_opt(x, 
                     DustEllipticalDistribution2PowerLaws, InterpolatedUnivariateSpline_SPF, 
-                    1e6, target_image, err_map, PSFModel = GAUSSIAN_PSF, pxInArcsec=0.01414, distance = 70.77)
+                    1e6, target_image, err_map, PSFModel = EMP_PSF, pxInArcsec=0.01414, distance = 70.77)
 
-grad_func = jax.grad(llp)
-print(grad_func(init_guess))
-
-
-
-soln = quick_optimize_full_opt(target_image, err_map, method = None, iters = 3000, PSFModel=GAUSSIAN_PSF, pxInArcsec=0.01414, distance = 70.77)
+soln = quick_optimize_full_opt(target_image, err_map, method = None, iters = 4000, PSFModel=EMP_PSF, pxInArcsec=0.01414, distance = 70.77)
 print(soln)
 
-cent_image = quick_image_full_opt(soln, PSFModel = GAUSSIAN_PSF, pxInArcsec=0.01414, distance = 70.77)
+
+cent_image = quick_image_full_opt(soln, PSFModel = EMP_PSF, pxInArcsec=0.01414, distance = 70.77)
 
 fig, axes = plt.subplots(1,3, figsize=(20,10))
 

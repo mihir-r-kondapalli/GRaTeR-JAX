@@ -34,7 +34,7 @@ def quick_image(pars, flux_scaling=1e6, **kwargs):
     return jax_model_all_1d(DustEllipticalDistribution2PowerLaws, InterpolatedUnivariateSpline_SPF, pars[0:5],
                                 InterpolatedUnivariateSpline_SPF.pack_pars(pars[5:]), flux_scaling, **kwargs)
 
-# 0: alpha_in, 1: alpha_out, 2: sma, 3: inclination, 4: position_angle, 5: xc, 6: yc
+# 0: xc, 1: yc, 2: alpha_in, 3: alpha_out, 4: sma, 5: inclination, 6: position_angle
 # 7 onwards is spline parameters, pxInArcsec and distance are good kwargs to include
 def quick_optimize_cent(target_image, err_map, flux_scaling=1e6, init_params = None, knots=jnp.linspace(1, -1, 6), disp = True, method = None,
                     iters = 500, bounds = None, **kwargs):
@@ -75,7 +75,7 @@ def quick_optimize_full_opt(target_image, err_map, flux_scaling=1e6, init_params
         init_guess = jnp.concatenate([init_disk_guess, init_cent_guess, distr_guess, init_knot_guess])
     else:
         init_guess = init_params
-        
+
     llp = lambda x: log_likelihood_1d_full_opt(x, 
                         DustEllipticalDistribution2PowerLaws, InterpolatedUnivariateSpline_SPF, 
                         flux_scaling, target_image, err_map, **kwargs)
