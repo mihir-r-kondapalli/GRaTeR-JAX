@@ -1,8 +1,10 @@
 import jax
 import jax.numpy as jnp
+import numpy as np
 from functools import partial
 import matplotlib.pyplot as plt
 from interpolated_univariate_spline import InterpolatedUnivariateSpline
+from astropy.io import fits
 
 class Jax_class:
 
@@ -119,7 +121,7 @@ class DustEllipticalDistribution2PowerLaws(Jax_class):
                                         radial_density_term)
 
         den2 = distr["ksi0"]*jnp.power(jnp.abs(radial_ratio+1e-8), distr["beta"]) + 1e-8
-        vertical_density_term = jnp.exp(-jnp.power((jnp.abs(z)+1e-8)/(jnp.abs(den2)), distr["gamma"]))
+        vertical_density_term = jnp.exp(-jnp.power((jnp.abs(z)+1e-8)/(jnp.abs(den2+1e-8)), jnp.abs(distr["gamma"])+1e-8))
         return radial_density_term*vertical_density_term
 
 class HenyeyGreenstein_SPF(Jax_class):
@@ -284,3 +286,26 @@ class GAUSSIAN_PSF(Jax_class):
         c = (jnp.sin(theta)**2)/(2*sigma**2) + (jnp.cos(theta)**2)/(2*sigma**2)
         return offset + amplitude*jnp.exp( - (a*((pos[0]-xo)**2) + 2*b*(pos[0]-xo)
                                                                       *(pos[1]-yo) + c*((pos[1]-yo)**2)))
+    
+
+class EMP_PSF(Jax_class):
+
+    def process_image(image, scale_factor=1, offset=1):
+        scaled_image = (image[::scale_factor, ::scale_factor])[1::, 1::]
+        cropped_image = image[70:210, 70:210]
+        def safe_float32_conversion(value):
+            try:
+                return np.float32(value)
+            except (ValueError, TypeError):
+                print("This value is unjaxable: " + str(value))
+        fin_image = np.nan_to_num(cropped_image)
+        fin_image = np.vectorize(safe_float32_conversion)(fin_image)
+        return fin_image
+
+    img = process_image(fits.open("PSF/emp_psf.fits")[0].data[0,:,:])
+
+    #define model function and pass independant variables x and y as a list
+    @classmethod
+    @partial(jax.jit, static_argnums=(0))
+    def generate(cls, pos):
+        return cls.img
