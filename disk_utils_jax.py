@@ -7,11 +7,11 @@ import jax.scipy.signal as jss
 
 @partial(jax.jit, static_argnums=(0,1,4))
 def jax_model(DistrModel, FuncModel, disk_params, spf_params, PSFModel = None,
-                  halfNbSlices=25, ksi0=3., gamma=2., beta=1.,
+                  halfNbSlices=25, e=0., ksi0=3., gamma=2., beta=1.,
                   nx=140, ny=140, pxInArcsec=0.01414, distance=50.):
 
     distr_params = DistrModel.init(accuracy=5.e-3, ain=disk_params['alpha_in'], aout=disk_params['alpha_out'], a=disk_params['sma'],
-                                   e=0., ksi0=ksi0, gamma=gamma, beta=beta, amin=0., dens_at_r0=1.)
+                                   e=e, ksi0=ksi0, gamma=gamma, beta=beta, amin=0., dens_at_r0=1.)
     disk_params_jax = ScatteredLightDisk.init(distr_params, disk_params['inclination'], disk_params['position_angle'],
                                               disk_params['alpha_in'], disk_params['alpha_out'], disk_params['sma'],
                                               nx=nx, ny=ny, distance = distance, omega =0., pxInArcsec=pxInArcsec,
