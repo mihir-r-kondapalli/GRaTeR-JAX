@@ -39,7 +39,7 @@ def quick_image(pars, flux_scaling=1e6, knots = jnp.linspace(1, -1, 6), **kwargs
 # 0: xc, 1: yc, 2: alpha_in, 3: alpha_out, 4: sma, 5: inclination, 6: position_angle
 # 7 onwards is spline parameters, pxInArcsec and distance are good kwargs to include
 def quick_optimize_cent(target_image, err_map, flux_scaling=1e6, init_params = None, knots=jnp.linspace(1, -1, 6), disp = True, method = None,
-                    iters = 500, bounds = None, **kwargs):
+                    iters = 500, bounds = None, full_soln = False, **kwargs):
 
     if init_params == None:
         init_knot_guess = DoubleHenyeyGreenstein_SPF.compute_phase_function_from_cosphi([0.5, 0.5, 0.5], knots)
@@ -56,6 +56,8 @@ def quick_optimize_cent(target_image, err_map, flux_scaling=1e6, init_params = N
     soln = minimize(llp, init_guess, options=opt, method=method, bounds=bounds,)
     if(disp):
         print(soln)
+    if(full_soln):
+        return soln
     return soln.x
 
 @partial(jax.jit, static_argnums=(2))
@@ -67,7 +69,7 @@ def quick_image_cent(pars, flux_scaling=1e6, PSFModel = None, knots = jnp.linspa
 # 0: alpha_in, 1: alpha_out, 2: sma, 3: inclination, 4: position_angle, 5: xc, 6: yc, 7: e, 8: ksi, 9: gamma, 10: beta
 # 11 onwards is spline parameters, pxInArcsec and distance are good kwargs to include
 def quick_optimize_full_opt(target_image, err_map, flux_scaling=1e6, init_params = None, knots=jnp.linspace(1, -1, 6), jac = None, disp = True, method = None,
-                    iters = 500, bounds = None, **kwargs):
+                    iters = 500, bounds = None, full_soln = False, **kwargs):
 
     if init_params == None:
         init_knot_guess = DoubleHenyeyGreenstein_SPF.compute_phase_function_from_cosphi([0.5, 0.5, 0.5], knots)
@@ -87,6 +89,8 @@ def quick_optimize_full_opt(target_image, err_map, flux_scaling=1e6, init_params
     soln = minimize(llp, init_guess, options=opt, method=method, jac=jac, bounds=bounds)
     if(disp):
         print(soln)
+    if(full_soln):
+        return soln
     return soln.x
 
 def quick_image_full_opt(pars, flux_scaling=1e6, knots = jnp.linspace(1, -1, 6), **kwargs):
