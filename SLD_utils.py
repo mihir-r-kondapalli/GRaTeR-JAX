@@ -64,7 +64,7 @@ class DustEllipticalDistribution2PowerLaws(Jax_class):
         p_dict["ksi0"] = ksi0
         p_dict["gamma"] = gamma
         p_dict["beta"] = beta
-        p_dict["zmax"] = ksi0*(-jnp.log(p_dict["accuracy"]))**(1./gamma)
+        p_dict["zmax"] = ksi0*(-jnp.log(p_dict["accuracy"]))**(1./(gamma+1e-8))
 
         # Set Vertical Density Analogue
         gamma = jnp.where(gamma < 0., 0.1, gamma)
@@ -90,13 +90,13 @@ class DustEllipticalDistribution2PowerLaws(Jax_class):
         p_dict["dens_at_r0"] = dens_at_r0
 
         # maximum distance of integration, AU
-        p_dict["rmax"] = p_dict["a"]*p_dict["accuracy"]**(1/p_dict["aout"])
-        p_dict["apeak"] = p_dict["a"] * jnp.power(-p_dict["ain"]/p_dict["aout"],
+        p_dict["rmax"] = p_dict["a"]*p_dict["accuracy"]**(1/(p_dict["aout"]+1e-8))
+        p_dict["apeak"] = p_dict["a"] * jnp.power(-p_dict["ain"]/(p_dict["aout"]+1e-8),
                                         1./(2.*(p_dict["ain"]-p_dict["aout"])))
         Gamma_in = jnp.abs(p_dict["ain"]+p_dict["beta"] + 1e-8)
         Gamma_out = -jnp.abs(p_dict["aout"]+p_dict["beta"] + 1e-8)
         p_dict["apeak_surface_density"] = p_dict["a"] * jnp.power(-Gamma_in/Gamma_out,
-                                                        1./(2.*(Gamma_in-Gamma_out)))
+                                                        1./(2.*(Gamma_in-Gamma_out+1e-8)))
         # the above formula comes from Augereau et al. 1999.
         p_dict["itiltthreshold"] = jnp.rad2deg(jnp.arctan(p_dict["rmax"]/p_dict["zmax"]))
 
@@ -113,7 +113,7 @@ class DustEllipticalDistribution2PowerLaws(Jax_class):
 
         den = (jnp.power(jnp.abs(radial_ratio)+1e-8, -2*distr["ain"]) +
                jnp.power(jnp.abs(radial_ratio)+1e-8, -2*distr["aout"]))
-        radial_density_term = jnp.sqrt(2./den)*distr["dens_at_r0"]
+        radial_density_term = jnp.sqrt(2./den+1e-8)*distr["dens_at_r0"]
         #if distr["pmin"] > 0:
         #    radial_density_term[r/(distr["pmin"]/(1-distr["e"]*costheta)) <= 1] = 0
         radial_density_term = jnp.where(distr["pmin"] > 0, 
@@ -123,6 +123,38 @@ class DustEllipticalDistribution2PowerLaws(Jax_class):
         den2 = distr["ksi0"]*jnp.power(jnp.abs(radial_ratio+1e-8), distr["beta"]) + 1e-8
         vertical_density_term = jnp.exp(-jnp.power((jnp.abs(z)+1e-8)/(jnp.abs(den2+1e-8)), jnp.abs(distr["gamma"])+1e-8))
         return radial_density_term*vertical_density_term
+    
+    '''@classmethod
+    @partial(jax.jit, static_argnums=(0,))
+    def density_cylindrical(cls, distr_params, r, costheta, z):
+        """ Returns the particle volume density at r, theta, z """
+        distr = cls.unpack_pars(distr_params)
+
+        radial_ratio = r * (1 - distr["e"] * costheta) / (distr["p"] + 1e-8)
+        jax.debug.print("radial_ratio: {}", jnp.sum(jnp.where(jnp.isnan(radial_ratio), 1, 0)))
+
+        den = (jnp.power(jnp.abs(radial_ratio) + 1e-8, -2 * distr["ain"] + 1e-8) +
+            jnp.power(jnp.abs(radial_ratio) + 1e-8, -2 * distr["aout"] + 1e-8))
+        jax.debug.print("den: {}", jnp.sum(jnp.where(jnp.isnan(den), 1, 0)))
+        
+        radial_density_term = jnp.sqrt(2. / den + 1e-8) * distr["dens_at_r0"]
+        jax.debug.print("radial_density_term (before): {}", jnp.sum(jnp.where(jnp.isnan(radial_density_term), 1, 0)))
+
+        radial_density_term = jnp.where(distr["pmin"] > 0, 
+                                        jnp.where(r * (1 - distr["e"] * costheta) / (distr["p"] + 1e-8) <= 1, 0., radial_density_term),
+                                        radial_density_term)
+        jax.debug.print("radial_density_term (after): {}", jnp.sum(jnp.where(jnp.isnan(radial_density_term), 1, 0)))
+
+        den2 = distr["ksi0"] * jnp.power(jnp.abs(radial_ratio + 1e-8), distr["beta"]) + 1e-8
+        jax.debug.print("den2: {}", den2)
+
+        vertical_density_term = jnp.exp(-jnp.power((jnp.abs(z) + 1e-8) / (jnp.abs(den2 + 1e-8)), jnp.abs(distr["gamma"]) + 1e-8))
+        jax.debug.print("vertical_density_term: {}", jnp.sum(jnp.where(jnp.isnan(vertical_density_term), 1, 0)))
+        
+        result = radial_density_term * vertical_density_term
+        jax.debug.print("result: {}", jnp.sum(jnp.where(jnp.isnan(result), 1, 0)))
+        
+        return result'''
 
 class HenyeyGreenstein_SPF(Jax_class):
     """

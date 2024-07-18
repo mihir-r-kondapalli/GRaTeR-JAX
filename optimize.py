@@ -1,6 +1,8 @@
-from regression import log_likelihood_1d_pos_all_pars_spline, log_likelihood_1d_full_opt, log_likelihood_1d_pos_cent
+import jax.scipy.optimize
+from regression import log_likelihood_1d_pos_all_pars_spline, log_likelihood_1d_full_opt, log_likelihood_1d_pos_cent, log_likelihood
 from disk_utils_jax import jax_model_all_1d, jax_model_all_1d_cent, jax_model_all_1d_full
 from scipy.optimize import minimize
+import jaxopt
 from SLD_utils import *
 import jax.numpy as jnp
 
@@ -79,6 +81,8 @@ def quick_optimize_full_opt(target_image, err_map, flux_scaling=1e6, init_params
     llp = lambda x: log_likelihood_1d_full_opt(x, 
                         DustEllipticalDistribution2PowerLaws, InterpolatedUnivariateSpline_SPF, 
                         flux_scaling, target_image, err_map, knots=knots, **kwargs)
+    #soln, ignore = jaxopt.ScipyMinimize(fun=llp, method="bfgs", maxiter=200, jit=False).run(init_params=init_guess)
+    #return soln
     opt = {'disp':False,'maxiter':iters}
     soln = minimize(llp, init_guess, options=opt, method=method, jac=jac, bounds=bounds)
     if(disp):
