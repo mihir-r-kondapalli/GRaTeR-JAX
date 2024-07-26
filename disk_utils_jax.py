@@ -207,7 +207,7 @@ def jax_model_all_1d_full(DistrModel, FuncModel, disk_params, spf_params, flux_s
                      PSFModel = None, halfNbSlices=25, nx=140, ny=140, pxInArcsec=0.01414, distance=50.):
 
     distr_params = DistrModel.init(accuracy=5.e-3, ain=disk_params[0], aout=disk_params[1], a=disk_params[2],
-                                   e=disk_params[7], ksi0=disk_params[8], gamma=disk_params[9], beta=disk_params[10], amin=0., dens_at_r0=1.)
+                                   e=0, ksi0=disk_params[8], gamma=disk_params[9], beta=disk_params[10], amin=disk_params[7], dens_at_r0=1.)
     disk_params_jax = ScatteredLightDisk.init(distr_params, disk_params[3], disk_params[4],
                                               disk_params[0], disk_params[1], disk_params[2],
                                               nx=nx, ny=ny, distance = distance, omega =0., pxInArcsec=pxInArcsec,
