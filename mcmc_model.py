@@ -32,10 +32,10 @@ class MCMC_model():
         p0 = [np.array(initial) + 1e-7 * np.random.randn(ndim) for i in range(nwalkers)]
         sampler = emcee.EnsembleSampler(nwalkers, ndim, self._lnprob, **kwargs)
         print("Running burn-in...")
-        p0, _, _ = sampler.run_mcmc(p0, burn_iter)
+        p0, _, _ = sampler.run_mcmc(p0, burn_iter,progress=True)
         sampler.reset()
         print("Running production...")
-        pos, prob, state = sampler.run_mcmc(p0, niter)
+        pos, prob, state = sampler.run_mcmc(p0, niter,progress=True)
         self.sampler, self.pos, self.prob, self.state = sampler, pos, prob, state
         return sampler, pos, prob, state
 
