@@ -64,9 +64,8 @@ def run_mcmc_ab(soln, target_image, err_map, row, name, nwalkers=250, niter=250,
                         1e6, target_image, err_map, PSFModel = EMP_PSF, pxInArcsec=0.01414,
                         distance = row["Distance"], knots=knots)
 
-
-    DISK_BOUNDS = np.array([np.array([0.1, -15, 0, 0, 0]), np.array([15, -0.1, 150, 180, 400])])
     CENT_BOUNDS = np.array([np.array([65, 65]), np.array([75, 75])])
+    DISK_BOUNDS = np.array([np.array([0.1, -15, 0, 0, 0]), np.array([15, -0.1, 150, 180, 400])])
     SPLINE_BOUNDS = np.array([1e-8 * np.ones(jnp.size(knots)), 0.1 * np.ones(jnp.size(knots))])
     BOUNDS = np.array([np.concatenate([CENT_BOUNDS[0], DISK_BOUNDS[0], np.log(SPLINE_BOUNDS[0])]),
                         np.concatenate([CENT_BOUNDS[1], DISK_BOUNDS[1], np.log(SPLINE_BOUNDS[1])])])
@@ -129,10 +128,13 @@ warnings.filterwarnings("ignore")
 
 num_disks = len(image_data)
 
-start = 0
+start = 7
 #num_disks = start+1
 
-for i in tqdm(range(start, num_disks)):
+# for i in tqdm(range(7, num_disks)):
+
+for i in range(start, num_disks):
+    print("Starting disk " + str(i+1) + " of " + str(num_disks))
     name = image_data.index[i]
     row = image_data.loc[name]
     start = datetime.now()
@@ -140,16 +142,23 @@ for i in tqdm(range(start, num_disks)):
     target_image = process_image(hdul['SCI'].data[1,:,:])
     err_map = process_image(create_empirical_err_map(hdul['SCI'].data[2,:,:])).astype(jnp.float64)
     soln = fit_spline(row, target_image, err_map)
-    mc_soln, aic, bic = run_mcmc_ab(soln, target_image, err_map, row, name, nwalkers = 300, niter = 300, burns = 60)
+    print(soln)
+    knots = get_inc_bounded_knots(row["Inclination"], row["Radius"], buffer = 0, num_knots=jnp.size(soln[7:]))
+    sc_image = quick_image_cent(soln, PSFModel = EMP_PSF, pxInArcsec=0.01414, distance = row["Distance"], knots=knots)
+    # plt.imshow(sc_image)
+    # plt.show()
 
-    # Print Messages
-    print(str(i+1) + " of " + str(num_disks) + " done.")
-    print('Name: ' + str(name))
-    print('Soln: ' + str(mc_soln))
-    print('AIC: ' + str(aic))
-    print('BIC: ' + str(bic))
-    print('Time taken: ' + str(datetime.now()-start))
-    print()
+    mc_soln, aic, bic = run_mcmc_ab(soln, target_image, err_map, row, name, nwalkers = 300, niter = 300, burns = 60)
+    break
+
+    # # Print Messages
+    # print(str(i+1) + " of " + str(num_disks) + " done.")
+    # print('Name: ' + str(name))
+    # print('Soln: ' + str(mc_soln))
+    # print('AIC: ' + str(aic))
+    # print('BIC: ' + str(bic))
+    # print('Time taken: ' + str(datetime.now()-start))
+    # print()
 
 
 '''name = image_data.index[1]
