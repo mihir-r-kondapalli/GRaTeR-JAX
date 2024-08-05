@@ -27,10 +27,10 @@ class MCMC_model():
             return -np.inf
         return lp + self.fun(theta)
 
-    def run(self, initial, nwalkers=500, niter = 500, burn_iter = 100, nconst = 1e-7):
+    def run(self, initial, nwalkers=500, niter = 500, burn_iter = 100, nconst = 1e-7, **kwargs):
         ndim = len(initial)
         p0 = [np.array(initial) + 1e-7 * np.random.randn(ndim) for i in range(nwalkers)]
-        sampler = emcee.EnsembleSampler(nwalkers, ndim, self._lnprob)
+        sampler = emcee.EnsembleSampler(nwalkers, ndim, self._lnprob, **kwargs)
         print("Running burn-in...")
         p0, _, _ = sampler.run_mcmc(p0, burn_iter)
         sampler.reset()
