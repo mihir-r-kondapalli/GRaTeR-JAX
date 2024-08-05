@@ -1,2 +1,3 @@
 *.pyc
 *.png
+mcmc_results/*.png
