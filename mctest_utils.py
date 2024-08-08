@@ -122,7 +122,7 @@ def plot_mc_img(name, target_image, err_map, sc_image, mc_image, init_val, fin_v
 
     snr = (target_image-mc_image)/err_map
     svmin = np.nanpercentile(snr[mask], 1)
-    svmax = np.nanpercentile(snr[mask], 99.9)
+    svmax = np.nanpercentile(snr[mask], 99)
     im = axes[2][2].imshow(snr, origin='lower', cmap='inferno')
     axes[2][2].set_title("MCMC Residual / Noise")
     plt.colorbar(im, ax=axes[2][2], shrink=0.75)
