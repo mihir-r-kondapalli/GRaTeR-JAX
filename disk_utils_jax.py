@@ -201,17 +201,17 @@ def jax_model_all_1d_cent(DistrModel, FuncModel, xc, yc, disk_params, spf_params
     return flux_scaling*scattered_light_image
 
 
-# 0: alpha_in, 1: alpha_out, 2: sma, 3: inclination, 4: position_angle, 5: xc, 6: yc, 7: e, 8: ksi, 9: gamma, 10: beta
+# 0: alpha_in, 1: alpha_out, 2: sma, 3: inclination, 4: position_angle, 5: xc, 6: yc, 7: e, 8: omega
 @partial(jax.jit, static_argnums=(0,1,5))
 def jax_model_all_1d_full(DistrModel, FuncModel, disk_params, spf_params, flux_scaling,
                      PSFModel = None, halfNbSlices=25, nx=140, ny=140, pxInArcsec=0.01414, distance=50.):
 
     distr_params = DistrModel.init(accuracy=5.e-3, ain=disk_params[0], aout=disk_params[1], a=disk_params[2],
-                                   e=0, ksi0=disk_params[8], gamma=disk_params[9], beta=disk_params[10], amin=disk_params[7], dens_at_r0=1.)
+                                   e=disk_params[7], ksi0=3, gamma=2, beta=1, amin=0, dens_at_r0=1.)
     disk_params_jax = ScatteredLightDisk.init(distr_params, disk_params[3], disk_params[4],
                                               disk_params[0], disk_params[1], disk_params[2],
-                                              nx=nx, ny=ny, distance = distance, omega =0., pxInArcsec=pxInArcsec,
-                                              xdo=0., ydo=0.)
+                                              nx=nx, ny=ny, distance = distance, omega = disk_params[8],
+                                              pxInArcsec=pxInArcsec, xdo=0., ydo=0.)
 
     xcent = jnp.where(nx%2==1, nx/2-0.5, nx/2).astype(int)
     ycent = jnp.where(ny%2==1, ny/2-0.5, ny/2).astype(int)

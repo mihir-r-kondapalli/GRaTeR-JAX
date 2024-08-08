@@ -99,7 +99,7 @@ def run_mcmc_ab(soln, target_image, err_map, row, name, nwalkers=250, niter=250,
         for j in range(0, 3):
             if(3*i+j < len(soln)):
                 axes[i][j].plot(np.linspace(0, nwalkers, niter), mc_model.sampler.get_chain()[:, :, 3*i+j].T)
-                axes[i][j].set_ylim(BOUNDS[0][3*i+j], BOUNDS[1][3*i+j])
+                #axes[i][j].set_ylim(BOUNDS[0][3*i+j], BOUNDS[1][3*i+j])    sets plot y-limits to that of the actual parameter
                 axes[i][j].set_title(labels[3*i+j])
     plt.savefig("mcmc_results/"+name+"_chainplot.png")
 
@@ -110,7 +110,7 @@ def run_mcmc_ab(soln, target_image, err_map, row, name, nwalkers=250, niter=250,
     # Need to adjust for log
     mc_image = quick_image_cent(jnp.concatenate([mc_soln[0:7], jnp.exp(mc_soln[7:])]), PSFModel = EMP_PSF, pxInArcsec=0.01414, distance = row["Distance"], knots=knots)
 
-    plot_mc_img(name, err_map, target_image, sc_image, mc_image, round(-llp(init_soln), 3), round(-llp(mc_soln), 3))
+    plot_mc_img(name, target_image, err_map, sc_image, mc_image, round(-llp(init_soln), 3), round(-llp(mc_soln), 3))
     plt.savefig("mcmc_results/"+name+"_mcresid.png")
 
     return mc_soln, get_aic(-llp(mc_soln), len(mc_soln)), get_bic(-llp(mc_soln), len(mc_soln))
@@ -128,14 +128,17 @@ warnings.filterwarnings("ignore")
 
 num_disks = len(image_data)
 
-start = 7
+start = 0
 #num_disks = start+1
 
 # for i in tqdm(range(7, num_disks)):
 
+tot_start = datetime.now()
+
 for i in range(start, num_disks):
     print("Starting disk " + str(i+1) + " of " + str(num_disks))
     name = image_data.index[i]
+    print('Name: ' + str(name))
     row = image_data.loc[name]
     start = datetime.now()
     hdul = fits.open("Fits/"+name+".fits")
@@ -148,8 +151,7 @@ for i in range(start, num_disks):
     # plt.imshow(sc_image)
     # plt.show()
 
-    mc_soln, aic, bic = run_mcmc_ab(soln, target_image, err_map, row, name, nwalkers = 300, niter = 300, burns = 60)
-    break
+    mc_soln, aic, bic = run_mcmc_ab(soln, target_image, err_map, row, name, nwalkers = 500, niter = 500, burns = 100)
 
     # # Print Messages
     # print(str(i+1) + " of " + str(num_disks) + " done.")
@@ -157,9 +159,11 @@ for i in range(start, num_disks):
     # print('Soln: ' + str(mc_soln))
     # print('AIC: ' + str(aic))
     # print('BIC: ' + str(bic))
-    # print('Time taken: ' + str(datetime.now()-start))
-    # print()
+    print('Time taken: ' + str(datetime.now()-start))
+    print()
 
+print("Test Completed!")
+print("Total time taken: " + str(datetime.now()-tot_start))
 
 '''name = image_data.index[1]
 row = image_data.loc[name]
