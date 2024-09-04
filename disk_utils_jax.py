@@ -117,7 +117,7 @@ def jax_model_all_1d(DistrModel, FuncModel, disk_params, spf_params, flux_scalin
         scattered_light_image = jss.convolve2d(scattered_light_image, psf_image, mode='same')
     
     return flux_scaling*scattered_light_image
-
+ 
 
 @partial(jax.jit, static_argnums=(0,1,4))
 def jax_model_spline(DistrModel, FuncModel, disk_params, spf_params, PSFModel = None,
