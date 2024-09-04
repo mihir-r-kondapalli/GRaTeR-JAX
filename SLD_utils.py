@@ -72,12 +72,12 @@ class DustEllipticalDistribution2PowerLaws(Jax_class):
         beta = jnp.where(beta < 0., 0., beta)
 
         # Set Radial Density Analogue
-        ain = jnp.where(ain < 0.1, 0.1, ain)
-        aout = jnp.where(aout > -0.1, -0.1, aout)
+        ain = jnp.where(ain < 0.01, 0.01, ain)
+        aout = jnp.where(aout > -0.01, -0.01, aout)
         e = jnp.where(e < 0., 0., e)
         e = jnp.where(e >= 1, 0.99, e)
         amin = jnp.where(amin < 0., 0., amin)
-        dens_at_r0 = jnp.where(dens_at_r0 < 0., 1., dens_at_r0)
+        dens_at_r0 = jnp.where(dens_at_r0 < 0., 0., dens_at_r0)
 
         p_dict["ain"] = ain
         p_dict["aout"] = aout

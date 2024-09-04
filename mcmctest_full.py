@@ -10,7 +10,7 @@ from SLD_utils import (DoubleHenyeyGreenstein_SPF, InterpolatedUnivariateSpline_
                     EMP_PSF)
 import warnings
 from optimize import quick_image_cent
-from regression import log_likelihood_1d_full_opt
+from regression import log_likelihood_1d_full_opt, log_likelihood_1d_pos_cent
 from datetime import datetime
 from mcmc_model import MCMC_model
 from tqdm import tqdm
@@ -37,7 +37,7 @@ def fit_spline(row, target_image, err_map, disp = False, flux_scaling=1e6):
     for i in range(0, int(row["Knots"])):
         bounds.append((1e-8, 0.1))
 
-    llp_spline = lambda x: log_likelihood_1d_full_opt(jnp.concatenate([disk_pars, x]), 
+    llp_spline = lambda x: log_likelihood_1d_pos_cent(jnp.concatenate([disk_pars, x]), 
                         DustEllipticalDistribution2PowerLaws, InterpolatedUnivariateSpline_SPF,
                         flux_scaling, target_image, err_map, knots=knots, distance = row["Distance"],
                         PSFModel = EMP_PSF)
@@ -70,9 +70,9 @@ def run_mcmc_ab(soln, target_image, err_map, row, name, nwalkers=250, niter=250,
     CENT_BOUNDS = np.array([np.array([65, 65]), np.array([75, 75])])
     DISK_BOUNDS = np.array([np.array([0.1, -15, 0, 0, 0]), np.array([15, -0.1, 150, 180, 400])])
     SPLINE_BOUNDS = np.array([1e-8 * np.ones(jnp.size(knots)), 0.1 * np.ones(jnp.size(knots))])
-    DISTR_BOUNDS = np.array([])
-    BOUNDS = np.array([np.concatenate([CENT_BOUNDS[0], DISK_BOUNDS[0], np.log(SPLINE_BOUNDS[0])]),
-                        np.concatenate([CENT_BOUNDS[1], DISK_BOUNDS[1], np.log(SPLINE_BOUNDS[1])])])
+    ECC_BOUNDS = np.array([-8., 0])
+    BOUNDS = np.array([np.concatenate([DISK_BOUNDS[0], CENT_BOUNDS[0], ECC_BOUNDS[0], np.log(SPLINE_BOUNDS[0])]),
+                        np.concatenate([DISK_BOUNDS[1], CENT_BOUNDS[1], ECC_BOUNDS[1], np.log(SPLINE_BOUNDS[1])])])
 
     if np.all(soln < BOUNDS[0]) and np.all(soln > BOUNDS[1]):
         print()
@@ -83,7 +83,8 @@ def run_mcmc_ab(soln, target_image, err_map, row, name, nwalkers=250, niter=250,
         print(oob)
         exit()
 
-    init_soln = jnp.concatenate([soln[0:7], jnp.log(soln[7:])])
+    # initial e and omega (0.1 and 0)
+    init_soln = jnp.concatenate([soln[2:7], soln[0:2], jnp.array([jnp.log(0.1), 0.]), jnp.log(soln[7:])])
 
     mc_model = MCMC_model(llp, BOUNDS)
     mc_model.run(init_soln, nconst = 1e-7, nwalkers=nwalkers, niter=niter, burn_iter=burns)
@@ -139,7 +140,7 @@ start = 0
 
 tot_start = datetime.now()
 
-for i in range(start, num_disks):
+'''for i in range(start, num_disks):
     print("Starting disk " + str(i+1) + " of " + str(num_disks))
     name = image_data.index[i]
     print('Name: ' + str(name))
@@ -164,12 +165,12 @@ for i in range(start, num_disks):
     # print('AIC: ' + str(aic))
     # print('BIC: ' + str(bic))
     print('Time taken: ' + str(datetime.now()-start))
-    print()
+    print()'''
 
-print("Test Completed!")
-print("Total time taken: " + str(datetime.now()-tot_start))
+#print("Test Completed!")
+#print("Total time taken: " + str(datetime.now()-tot_start))
 
-'''name = image_data.index[1]
+name = image_data.index[1]
 row = image_data.loc[name]
 start = datetime.now()
 hdul = fits.open("Fits/"+name+".fits")
@@ -187,4 +188,4 @@ print('Soln: ' + str(mc_soln))
 print('AIC: ' + str(aic))
 print('BIC: ' + str(bic))
 print('Time taken: ' + str(datetime.now()-start))
-print()'''
+print()
