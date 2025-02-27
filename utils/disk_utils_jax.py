@@ -244,7 +244,7 @@ def jax_model_all_1d_full(DistrModel, FuncModel, disk_params, spf_params, flux_s
 
 
 @partial(jax.jit, static_argnums=(0,1,5))
-def jax_model_winnie(DistrModel, FuncModel, disk_params, spf_params, psf_parangs, winnie_psf,
+def jax_model_winnie(DistrModel, FuncModel, disk_params, spf_params, winnie_psf,
                   halfNbSlices=25, e=0., ksi0=3., gamma=2., beta=1.,
                   nx=140, ny=140, pxInArcsec=0.01414, distance=50.):
 
@@ -274,14 +274,14 @@ def jax_model_winnie(DistrModel, FuncModel, disk_params, spf_params, psf_parangs
                                                                   x_vector, y_vector, scattered_light_map, image, limage, tmp,
                                                                   halfNbSlices)
 
-    convolved_image = jnp.mean(winnie_psf.get_convolved_cube(scattered_light_image, psf_parangs), axis=0)
+    convolved_image = jnp.mean(winnie_psf.get_convolved_cube(scattered_light_image), axis=0)
     
     return disk_params['flux_scaling']*convolved_image
 
 
 # 0: alpha_in, 1: alpha_out, 2: sma, 3: inclination, 4: position_angle
-@partial(jax.jit, static_argnums=(0,1,7))
-def jax_model_all_1d_cent_winnie(DistrModel, FuncModel, xc, yc, disk_params, spf_params, psf_params, winnie_psf, flux_scaling,
+@partial(jax.jit, static_argnums=(0,1,6))
+def jax_model_all_1d_cent_winnie(DistrModel, FuncModel, xc, yc, disk_params, spf_params, winnie_psf, flux_scaling,
                      PSFModel = None, halfNbSlices=25, ksi0=3., gamma=2., beta=1.,
                      nx=140, ny=140,
                     pxInArcsec=0.01414, distance=50.):
@@ -316,6 +316,6 @@ def jax_model_all_1d_cent_winnie(DistrModel, FuncModel, xc, yc, disk_params, spf
     scattered_light_image = jax.scipy.ndimage.map_coordinates(jnp.copy(scattered_light_image),
                                                             jnp.array([y, x]),order=1,cval = 0.)
 
-    convolved_image = jnp.mean(winnie_psf.get_convolved_cube(scattered_light_image, psf_params), axis=0)
+    convolved_image = jnp.mean(winnie_psf.get_convolved_cube(scattered_light_image), axis=0)
     
     return flux_scaling*scattered_light_image

@@ -16,29 +16,31 @@ import jax.lax as lax
 @register_pytree_node_class
 class WinniePSF:
 
-    def __init__(self, psfs, psf_inds_rolls, im_mask_rolls, psf_offsets):
+    def __init__(self, psfs, psf_inds_rolls, im_mask_rolls, psf_offsets, psf_parangs, num_unique_psfs):
         self.psfs = jnp.array(psfs)
         self.psf_inds_rolls = jnp.array(psf_inds_rolls)
         self.im_mask_rolls = jnp.array(im_mask_rolls)
         self.psf_offsets = jnp.array(psf_offsets)
+        self.psf_parangs = psf_parangs
+        self.num_unique_psfs = num_unique_psfs
 
-    def get_convolved_cube(self, image, parangs):
-        convolved_cube = self.convolve_cube(image=image, parangs=parangs, cent=jnp.array((image.shape[1] / 2, image.shape[0] / 2)))
+    def get_convolved_cube(self, image):
+        convolved_cube = self.convolve_cube(image=image, cent=jnp.array((image.shape[1] / 2, image.shape[0] / 2)))
         return convolved_cube
 
     # Assuming parangs are already unique
-    def convolve_cube(self, image, parangs, cent):
-        nT = jnp.size(parangs)
+    def convolve_cube(self, image, cent):
+        nT = jnp.size(self.psf_parangs)
         ny, nx = image.shape[-2:]
 
         # Rotate the hypercube for each unique angle
         inp_rot_uni = self.rotate_hypercube(
-            jnp.tile(image[None, ...], (nT, 1, 1)), parangs, cent, cval0=0.
+            jnp.tile(image[None, ...], (nT, 1, 1)), self.psf_parangs, cent, cval0=0.
         )
         imcube = jnp.zeros((nT, ny, nx))
 
         # Convolve rotated images
-        for i in range(0, jnp.size(parangs)):
+        for i in range(0, jnp.size(self.psf_parangs)):
             imcube = imcube.at[i].set(
                 self.convolve_with_spatial_psfs(
                     inp_rot_uni[i],
@@ -69,7 +71,7 @@ class WinniePSF:
         imcon = jnp.zeros_like(im)
 
 
-        for i in jnp.unique(psf_inds_masked, size=46)[1:]:    #### QUESTIONABLE: pre-computing the number of unique psfs
+        for i in jnp.unique(psf_inds_masked, size=self.num_unique_psfs)[1:]:    #### QUESTIONABLE: pre-computing the number of unique psfs
             mask_i = psf_inds_masked == i
             im_to_convolve = jnp.where(mask_i, im, 0.0)
             imcon += jax.scipy.signal.fftconvolve(im_to_convolve, self.psfs[i], mode='same')
@@ -79,18 +81,15 @@ class WinniePSF:
 
     # Using pytrees for flattening/unflattening instead of manual flattening/unflattening from Jax_class
     def tree_flatten(self):
-        children = (self.psfs, self.psf_inds_rolls, self.im_mask_rolls, self.psf_offsets)
-        aux_data = {}
+        children = (self.psfs, self.psf_inds_rolls, self.im_mask_rolls, self.psf_offsets, self.psf_parangs)
+        aux_data = (self.num_unique_psfs)
         return children, aux_data
 
     @classmethod
     def tree_unflatten(cls, aux_data, children):
-        psfs, psf_inds_rolls, im_mask_rolls, psf_offsets = children
-        obj = cls()
-        obj.psfs = psfs
-        obj.psf_inds_rolls = psf_inds_rolls
-        obj.im_mask_rolls = im_mask_rolls
-        obj.psf_offsets = psf_offsets
+        psfs, psf_inds_rolls, im_mask_rolls, psf_offsets, psf_parangs = children
+        num_unique_psfs = aux_data
+        obj = cls(psfs, psf_inds_rolls, im_mask_rolls, psf_offsets, psf_parangs, num_unique_psfs)
         return obj
 
 

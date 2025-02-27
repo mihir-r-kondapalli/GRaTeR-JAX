@@ -273,14 +273,18 @@ class InterpolatedUnivariateSpline_SPF(Jax_class):
         This function takes a array of (knots) values and converts them into an InterpolatedUnivariateSpline model.
         Also has inclination bounds which help narrow the spline fit
         """    
-        return InterpolatedUnivariateSpline(knots, p_arr)
+        
+        y_vals = p_arr
+        return InterpolatedUnivariateSpline(knots, y_vals)
 
     @classmethod
     @partial(jax.jit, static_argnums=(0))
     def init(cls, p_arr, knots=jnp.linspace(1, -1, 6)):
         """
         """
-        return InterpolatedUnivariateSpline(knots, p_arr)
+
+        y_vals = p_arr
+        return InterpolatedUnivariateSpline(knots, y_vals)
     
     @classmethod
     @partial(jax.jit, static_argnums=(0,))

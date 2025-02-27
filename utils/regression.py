@@ -99,11 +99,11 @@ def log_likelihood_1d_pos_cent(params, DistrModel, FuncModel, flux_scaling, targ
 
 # Basically log_likelihood_1d_pos_all_pars_spline but including cent as the first two values in the parameter array and including the dynamic psf
 # 0: xc, 1: yc, 2: alpha_in, 3: alpha_out, 4: sma, 5: inclination, 6: position_angle, spline parameters
-#@partial(jax.jit, static_argnums=(1,2,4))
-def log_likelihood_1d_pos_cent_winnie(params, DistrModel, FuncModel, psf_parangs, winnie_psf, flux_scaling, target_image, err_map,
+@partial(jax.jit, static_argnums=(1,2,3))
+def log_likelihood_1d_pos_cent_winnie(params, DistrModel, FuncModel, winnie_psf, flux_scaling, target_image, err_map,
                                             knots = jnp.linspace(1,-1,6), **kwargs):
     model_image = jax_model_all_1d_cent_winnie(DistrModel, FuncModel, params[0], params[1], params[2:7], FuncModel.pack_pars(params[7:],
-                                    knots=knots), psf_parangs, winnie_psf, flux_scaling, PSFModel=None, **kwargs)
+                                    knots=knots), winnie_psf, flux_scaling, PSFModel=None, **kwargs)
     sigma2 = jnp.power(err_map, 2)
     result = jnp.power((target_image - model_image), 2) / sigma2 + jnp.log(sigma2)
     result = jnp.where(jnp.isnan(result), 0, result)
