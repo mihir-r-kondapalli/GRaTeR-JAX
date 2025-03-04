@@ -229,22 +229,27 @@ class InterpolatedUnivariateSpline_SPF(Jax_class):
     Locations are fixed to the given knots, pack_pars and init both return the spline model itself
     """
 
-    params = {'low_bound': -1, 'up_bound': 1, 'num_knots': 6, 'knot_values': 0.5*jnp.ones(6)}
+    params = {'low_bound': -1, 'up_bound': 1, 'num_knots': 6, 'knot_values': jnp.ones(6)}
 
     @classmethod
-    def init(cls, p_dict):
+    @partial(jax.jit, static_argnums=(0))
+    def init(cls, p_arr, knots = jnp.linspace(1, -1, 6)):
         """
         """
-        return cls.pack_pars(cls.params)
+        return cls.pack_pars(p_arr, knots=knots)
+    
+    @classmethod
+    def get_knots(cls, p_dict):
+        return jnp.linspace(p_dict['up_bound'], p_dict['low_bound'], p_dict['num_knots'])
 
     @classmethod
-    def pack_pars(cls, p_dict):
+    @partial(jax.jit, static_argnums=(0))
+    def pack_pars(cls, p_arr, knots = jnp.linspace(1, -1, 6)):
         """
         This function takes a array of (knots) values and converts them into an InterpolatedUnivariateSpline model.
         Also has inclination bounds which help narrow the spline fit
         """    
-        return InterpolatedUnivariateSpline(jnp.linspace(p_dict['low_bound'], p_dict['up_bound'], p_dict['num_knots']),
-                                            p_dict['knot_values'])
+        return InterpolatedUnivariateSpline(knots, p_arr)
     
     @classmethod
     @partial(jax.jit, static_argnums=(0))

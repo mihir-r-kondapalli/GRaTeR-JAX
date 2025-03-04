@@ -180,6 +180,7 @@ class ScatteredLightDisk(Jax_class):
         for il in range(1, nbSlices):
             scattered_light_map += (ll[il]-ll[il-1]) * (limage[il-1, :, :] +
                                                              limage[il, :, :])
+
         scattered_light_map = jnp.where(validPixel_map, scattered_light_map * dl_map / 2. * disk["pxInAU"]**2, 0)
 
         #ideally should check for valid pixel map

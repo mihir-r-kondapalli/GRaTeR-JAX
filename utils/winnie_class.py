@@ -1,8 +1,7 @@
 from functools import partial
 import numpy as np
 import webbpsf_ext
-from winnie_jwst_fm import generate_nircam_psf_grid
-
+from utils.winnie_jwst_fm import generate_nircam_psf_grid
 import jax.numpy as jnp
 from jax.scipy.ndimage import map_coordinates
 import jax
