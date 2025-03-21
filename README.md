@@ -27,43 +27,10 @@ pip install --upgrade "jax[cpu]"  # or "jax[cuda]" for GPU
 
 ## Usage
 
-### Example: Running a Basic Scattered Light Disk Model
+### Refer to ObjectiveFunctionTest.ipynb for building basic disk models and fitting them to images.
 
-```python
-import jax.numpy as jnp
-from utils.SLD_ojax import compute_disk_model
-
-params = {"inclination": 75, "scale_height": 0.1, "albedo": 0.5}
-disk_image = compute_disk_model(params)
-```
-
-### PSF Convolution Example
-
-```python
-from utils.PSFConv import convolve_with_psf
-psf_convolved_disk = convolve_with_psf(disk_image, psf_kernel)
-```
-
-### Example: Parameter Estimation with JAX Optimization
-
-```python
-from jax import grad, jit
-from utils.objective_functions import loss_function
-
-@jit
-def optimize_params(params):
-    grad_loss = grad(loss_function)
-    return params - 0.01 * grad_loss(params)  # Simple gradient descent step
-```
-
-### Example: Using WebbPSF Data
-
-```python
-from webbpsf import instrument
-
-jwst = instrument.JWST()
-jwst.load_wavelength_dependent_psf()
-```
+Information about the disk and misc parameters can be found in objective_functions.py. Information about the
+scattering phase function and point spread function parametrs can be found in new_SLD_utils.py.
 
 ## Repository Structure
 
