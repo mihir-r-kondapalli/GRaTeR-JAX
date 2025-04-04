@@ -3,6 +3,7 @@ import jax.numpy as jnp
 import numpy as np
 from functools import partial
 from utils.new_SLD_utils import InterpolatedUnivariateSpline_SPF, Winnie_PSF
+import matplotlib.pyplot as plt
 
 class Parameter_Index:
     
@@ -336,8 +337,31 @@ def objective_fit(params_fit, fit_keys, disk_params, spf_params, psf_params, mis
             flux_scaling=misc_params['flux_scaling'], knots=InterpolatedUnivariateSpline_SPF.get_knots(temp_spf_params)
         )
 
+    result = residuals(target_image,err_map,model_image)
+
+    return -0.5 * jnp.sum(result)  # / jnp.size(target_image)
+
+def residuals(target_image,err_map,model_image):
+    """
+    residuals for use in objective function
+    """
     sigma2 = jnp.power(err_map, 2)
     result = jnp.power((target_image - model_image), 2) / sigma2 + jnp.log(sigma2)
     result = jnp.where(jnp.isnan(result), 0, result)
+    return result
 
-    return -0.5 * jnp.sum(result)  # / jnp.size(target_image)
+def plot_fit_output(target_image,err_map,model_image,target_name='unknown',save=False):
+    """
+    plotting function for residuals, image, and model
+    """
+    fig, ax = plt.subplots(1,3)
+    ax[0].imshow(target_image,origin='lower')
+    ax[1].imshow(model_image,origin='lower')
+    ax[2].imshow(residuals(target_image, err_map, model_image),origin='lower')
+    ax[0].set_title('Data')
+    ax[1].set_title('Model')
+    ax[2].set_title('Residuals')
+    plt.tight_layout()
+    if save==True:
+        plt.savefig('{}_modelcomp.png'.format(target_name))
+    plt.show()
