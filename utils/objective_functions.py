@@ -336,8 +336,15 @@ def objective_fit(params_fit, fit_keys, disk_params, spf_params, psf_params, mis
             flux_scaling=misc_params['flux_scaling'], knots=InterpolatedUnivariateSpline_SPF.get_knots(temp_spf_params)
         )
 
+    result = residuals(target_image,err_map,model_image)
+
+    return -0.5 * jnp.sum(result)  # / jnp.size(target_image)
+
+def residuals(target_image,err_map,model_image):
+    """
+    residuals for use in objective function
+    """
     sigma2 = jnp.power(err_map, 2)
     result = jnp.power((target_image - model_image), 2) / sigma2 + jnp.log(sigma2)
     result = jnp.where(jnp.isnan(result), 0, result)
-
-    return -0.5 * jnp.sum(result)  # / jnp.size(target_image)
+    return result
