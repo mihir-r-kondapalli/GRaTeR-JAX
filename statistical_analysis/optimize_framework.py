@@ -151,7 +151,7 @@ class OptimizeUtils:
             indices = (radii > i*annulus_width) & (radii <= (i+1)*annulus_width) 
             noise_array[indices] = np.nanstd(data[indices])
         mask = radii <= mask_rad
-        noise_array[mask] = 0
+        noise_array[mask] = 1e10
 
         if(outlier_pixels != None):
             for pixel in outlier_pixels:
