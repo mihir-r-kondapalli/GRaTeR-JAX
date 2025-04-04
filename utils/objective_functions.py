@@ -3,6 +3,7 @@ import jax.numpy as jnp
 import numpy as np
 from functools import partial
 from utils.new_SLD_utils import InterpolatedUnivariateSpline_SPF, Winnie_PSF
+import matplotlib.pyplot as plt
 
 class Parameter_Index:
     
@@ -348,3 +349,19 @@ def residuals(target_image,err_map,model_image):
     result = jnp.power((target_image - model_image), 2) / sigma2 + jnp.log(sigma2)
     result = jnp.where(jnp.isnan(result), 0, result)
     return result
+
+def plot_fit_output(target_image,err_map,model_image,target_name='unknown',save=False):
+    """
+    plotting function for residuals, image, and model
+    """
+    fig, ax = plt.subplots(1,3)
+    ax[0].imshow(target_image,origin='lower')
+    ax[1].imshow(model_image,origin='lower')
+    ax[2].imshow(residuals(target_image, err_map, model_image),origin='lower')
+    ax[0].set_title('Data')
+    ax[1].set_title('Model')
+    ax[2].set_title('Residuals')
+    plt.tight_layout()
+    if save==True:
+        plt.savefig('{}_modelcomp.png'.format(target_name))
+    plt.show()
