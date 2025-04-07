@@ -309,7 +309,7 @@ class EMP_PSF(Jax_class):
         fin_image = np.vectorize(safe_float32_conversion)(fin_image)
         return fin_image
 
-    img = process_image(fits.open("PSF/emp_psf.fits")[0].data[0,:,:])
+    img = process_image(fits.open("PSFs/emp_psf.fits")[0].data[0,:,:])
 
     #define model function and pass independant variables x and y as a list
     @classmethod
