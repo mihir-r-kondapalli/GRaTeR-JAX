@@ -1,6 +1,6 @@
 # GRaTeR-JAX
 
-**GRaTeR-JAX** is a JAX-based implementation of the **Generalized Radial Transporter (GRaTeR)** framework, designed for modeling scattered light disks in protoplanetary systems. This repository provides tools for forward modeling, optimization, and parameter estimation of scattered light disk images using JAX's accelerated computations.
+**GRaTeR-JAX** is a machine learning JAX-based implementation of the **Generalized Radial Transporter (GRaTeR)** framework, designed for modeling scattered light disks in protoplanetary systems. This repository provides tools for forward modeling, optimization, and parameter estimation of scattered light disk images using JAX's accelerated computations.
 
 ## Features
 
@@ -30,7 +30,7 @@ pip install --upgrade "jax[cpu]"  # or "jax[cuda]" for GPU
 ### Refer to ObjectiveFunctionTest.ipynb for building basic disk models and fitting them to images.
 
 Information about the disk and misc parameters can be found in objective_functions.py. Information about the
-scattering phase function and point spread function parametrs can be found in new_SLD_utils.py.
+scattering phase function and point spread function parameters can be found in SLD_utils.py.
 
 ## Repository Structure
 
@@ -40,7 +40,7 @@ GRaTeR-JAX/
 │── statistical-analysis/  # Example Jupyter notebooks
 │── webbpsf-data           # PSF data for various instruments
 │── cds/                   # Utility files for WebbPSF convolution
-│── PSF/                   # Empirical PSFs
+│── PSFs/                   # PSF data
 │── requirements.txt       # Dependencies
 │── README.md              # This document
 ```
