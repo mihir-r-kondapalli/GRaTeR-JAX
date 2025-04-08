@@ -19,7 +19,7 @@ __all__ = ['ScatteredLightDisk',
 import jax
 import jax.numpy as jnp
 from functools import partial
-from SLD_utils import *
+from new_SLD_utils import *
 
 
 class ScatteredLightDisk(Jax_class):
