@@ -5,6 +5,8 @@ from functools import partial
 import matplotlib.pyplot as plt
 from utils.interpolated_univariate_spline import InterpolatedUnivariateSpline
 from astropy.io import fits
+import jax.scipy.signal as jss
+from utils.winnie_class import WinniePSF
 
 class Jax_class:
 
@@ -123,38 +125,6 @@ class DustEllipticalDistribution2PowerLaws(Jax_class):
         den2 = distr["ksi0"]*jnp.power(jnp.abs(radial_ratio+1e-8), distr["beta"]) + 1e-8
         vertical_density_term = jnp.exp(-jnp.power((jnp.abs(z)+1e-8)/(jnp.abs(den2+1e-8)), jnp.abs(distr["gamma"])+1e-8))
         return radial_density_term*vertical_density_term
-    
-    '''@classmethod
-    @partial(jax.jit, static_argnums=(0,))
-    def density_cylindrical(cls, distr_params, r, costheta, z):
-        """ Returns the particle volume density at r, theta, z """
-        distr = cls.unpack_pars(distr_params)
-
-        radial_ratio = r * (1 - distr["e"] * costheta) / (distr["p"] + 1e-8)
-        jax.debug.print("radial_ratio: {}", jnp.sum(jnp.where(jnp.isnan(radial_ratio), 1, 0)))
-
-        den = (jnp.power(jnp.abs(radial_ratio) + 1e-8, -2 * distr["ain"] + 1e-8) +
-            jnp.power(jnp.abs(radial_ratio) + 1e-8, -2 * distr["aout"] + 1e-8))
-        jax.debug.print("den: {}", jnp.sum(jnp.where(jnp.isnan(den), 1, 0)))
-        
-        radial_density_term = jnp.sqrt(2. / den + 1e-8) * distr["dens_at_r0"]
-        jax.debug.print("radial_density_term (before): {}", jnp.sum(jnp.where(jnp.isnan(radial_density_term), 1, 0)))
-
-        radial_density_term = jnp.where(distr["pmin"] > 0, 
-                                        jnp.where(r * (1 - distr["e"] * costheta) / (distr["p"] + 1e-8) <= 1, 0., radial_density_term),
-                                        radial_density_term)
-        jax.debug.print("radial_density_term (after): {}", jnp.sum(jnp.where(jnp.isnan(radial_density_term), 1, 0)))
-
-        den2 = distr["ksi0"] * jnp.power(jnp.abs(radial_ratio + 1e-8), distr["beta"]) + 1e-8
-        jax.debug.print("den2: {}", den2)
-
-        vertical_density_term = jnp.exp(-jnp.power((jnp.abs(z) + 1e-8) / (jnp.abs(den2 + 1e-8)), jnp.abs(distr["gamma"]) + 1e-8))
-        jax.debug.print("vertical_density_term: {}", jnp.sum(jnp.where(jnp.isnan(vertical_density_term), 1, 0)))
-        
-        result = radial_density_term * vertical_density_term
-        jax.debug.print("result: {}", jnp.sum(jnp.where(jnp.isnan(result), 1, 0)))
-        
-        return result'''
 
 class HenyeyGreenstein_SPF(Jax_class):
     """
@@ -259,35 +229,30 @@ class InterpolatedUnivariateSpline_SPF(Jax_class):
     Locations are fixed to the given knots, pack_pars and init both return the spline model itself
     """
 
-    params = jnp.ones(6)
-
-    @classmethod
-    @partial(jax.jit, static_argnums=(0,))
-    def unpack_pars(cls, p_arr):
-        return p_arr
+    params = {'low_bound': -1, 'up_bound': 1, 'num_knots': 6, 'knot_values': jnp.ones(6)}
 
     @classmethod
     @partial(jax.jit, static_argnums=(0))
-    def pack_pars(cls, p_arr, knots=jnp.linspace(1, -1, 6)):
+    def init(cls, p_arr, knots = jnp.linspace(1, -1, 6)):
+        """
+        """
+        return cls.pack_pars(p_arr, knots=knots)
+    
+    @classmethod
+    def get_knots(cls, p_dict):
+        return jnp.linspace(p_dict['up_bound'], p_dict['low_bound'], p_dict['num_knots'])
+
+    @classmethod
+    @partial(jax.jit, static_argnums=(0))
+    def pack_pars(cls, p_arr, knots = jnp.linspace(1, -1, 6)):
         """
         This function takes a array of (knots) values and converts them into an InterpolatedUnivariateSpline model.
         Also has inclination bounds which help narrow the spline fit
         """    
-        
-        y_vals = p_arr
-        return InterpolatedUnivariateSpline(knots, y_vals)
-
-    @classmethod
-    @partial(jax.jit, static_argnums=(0))
-    def init(cls, p_arr, knots=jnp.linspace(1, -1, 6)):
-        """
-        """
-
-        y_vals = p_arr
-        return InterpolatedUnivariateSpline(knots, y_vals)
+        return InterpolatedUnivariateSpline(knots, p_arr)
     
     @classmethod
-    @partial(jax.jit, static_argnums=(0,))
+    @partial(jax.jit, static_argnums=(0))
     def compute_phase_function_from_cosphi(cls, spline_model, cos_phi):
         """
         Compute the phase function at (a) specific scattering scattering
@@ -308,19 +273,29 @@ class InterpolatedUnivariateSpline_SPF(Jax_class):
 
 class GAUSSIAN_PSF(Jax_class):
 
+    params = {'FWHM': 3., 'xo': 0., 'yo': 0., 'theta': 0., 'offset': 0., 'amplitude': 1.}
+
     #define model function and pass independant variables x and y as a list
     @classmethod
-    @partial(jax.jit, static_argnums=(0,2,3,4,5,6,7))
-    def generate(cls, pos, FWHM = 3, xo = 0., yo = 0., theta=0, offset=0, amplitude=1):
-        sigma = FWHM / 2.355
-        a = (jnp.cos(theta)**2)/(2*sigma**2) + (jnp.sin(theta)**2)/(2*sigma**2)
-        b = -(jnp.sin(2*theta))/(4*sigma**2) + (jnp.sin(2*theta))/(4*sigma**2)
-        c = (jnp.sin(theta)**2)/(2*sigma**2) + (jnp.cos(theta)**2)/(2*sigma**2)
-        return offset + amplitude*jnp.exp( - (a*((pos[0]-xo)**2) + 2*b*(pos[0]-xo)
-                                                                      *(pos[1]-yo) + c*((pos[1]-yo)**2)))
+    @partial(jax.jit, static_argnums=(0))
+    def generate(cls, image, psf_params):
+        ny, nx = image.shape  # Get image size
+        x = jnp.linspace(-nx // 2, nx // 2, nx)
+        y = jnp.linspace(-ny // 2, ny // 2, ny)
+        X, Y = jnp.meshgrid(x, y)  # Create 2D grid
+        p_dict = cls.unpack_pars(psf_params)
+        sigma = p_dict['FWHM'] / 2.355
+        a = (jnp.cos(p_dict['theta'])**2)/(2*sigma**2) + (jnp.sin(p_dict['theta'])**2)/(2*sigma**2)
+        b = -(jnp.sin(2*p_dict['theta']))/(4*sigma**2) + (jnp.sin(2*p_dict['theta']))/(4*sigma**2)
+        c = (jnp.sin(p_dict['theta'])**2)/(2*sigma**2) + (jnp.cos(p_dict['theta'])**2)/(2*sigma**2)
+        psf_image = p_dict['offset'] + p_dict['amplitude']*jnp.exp( - (a*((X-p_dict['xo'])**2) + 2*b*(X-p_dict['xo'])
+                                                                      *(Y-p_dict['yo']) + c*((Y-p_dict['yo'])**2)))
+        return jss.convolve2d(image, psf_image, mode='same')
     
 
 class EMP_PSF(Jax_class):
+
+    params = {'scale_factor': 1, 'offset': 1}
 
     def process_image(image, scale_factor=1, offset=1):
         scaled_image = (image[::scale_factor, ::scale_factor])[1::, 1::]
@@ -334,10 +309,28 @@ class EMP_PSF(Jax_class):
         fin_image = np.vectorize(safe_float32_conversion)(fin_image)
         return fin_image
 
-    img = process_image(fits.open("PSF/emp_psf.fits")[0].data[0,:,:])
+    img = process_image(fits.open("PSFs/emp_psf.fits")[0].data[0,:,:])
 
     #define model function and pass independant variables x and y as a list
     @classmethod
     @partial(jax.jit, static_argnums=(0))
-    def generate(cls, pos):
-        return cls.img
+    def generate(cls, image, psf_params):
+        return jss.convolve2d(image, cls.img, mode='same')
+    
+
+class Winnie_PSF(Jax_class):
+
+    @classmethod
+    @partial(jax.jit, static_argnames=['cls', 'num_unique_psfs'])
+    def init(cls, psfs, psf_inds_rolls, im_mask_rolls, psf_offsets, psf_parangs, num_unique_psfs):
+        return WinniePSF(psfs, psf_inds_rolls, im_mask_rolls, psf_offsets, psf_parangs, num_unique_psfs)
+
+    @classmethod
+    @partial(jax.jit, static_argnums=(0))
+    def pack_pars(cls, winnie_model):
+        return winnie_model
+
+    @classmethod
+    @partial(jax.jit, static_argnums=(0))
+    def generate(cls, image, winnie_model):
+        return jnp.mean(winnie_model.get_convolved_cube(image), axis=0)

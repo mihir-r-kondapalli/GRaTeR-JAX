@@ -2,7 +2,7 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 from functools import partial
-from utils.new_SLD_utils import InterpolatedUnivariateSpline_SPF, Winnie_PSF
+from utils.SLD_utils import InterpolatedUnivariateSpline_SPF, Winnie_PSF
 import matplotlib.pyplot as plt
 
 class Parameter_Index:
@@ -318,6 +318,7 @@ def objective_fit(params_fit, fit_keys, disk_params, spf_params, psf_params, mis
             flux_scaling=misc_params['flux_scaling']
         )
     elif FuncModel == InterpolatedUnivariateSpline_SPF and PSFModel != Winnie_PSF:
+
         model_image = jax_model_spline(
             DiskModel, DistrModel, FuncModel, PSFModel,
             pack_pars(temp_disk_params, disk_params) if isinstance(disk_params, dict) else disk_params,
