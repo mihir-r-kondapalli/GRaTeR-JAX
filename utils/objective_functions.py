@@ -205,7 +205,7 @@ def objective_model(disk_params, spf_params, psf_params, misc_params,
     Objective function for optimization that updates only the selected parameters.
     """
     
-    if FuncModel != InterpolatedUnivariateSpline_SPF and PSFModel != Winnie_PSF:
+    if not(issubclass(FuncModel, InterpolatedUnivariateSpline_SPF)) and PSFModel != Winnie_PSF:
         model_image = jax_model(
             DiskModel, DistrModel, FuncModel, PSFModel,
             pack_pars(disk_params, disk_params) if isinstance(disk_params, dict) else disk_params,
@@ -215,7 +215,7 @@ def objective_model(disk_params, spf_params, psf_params, misc_params,
             nx = misc_params['nx'], ny = misc_params['ny'], halfNbSlices=misc_params['halfNbSlices'],
             flux_scaling=misc_params['flux_scaling']
         )
-    elif FuncModel != InterpolatedUnivariateSpline_SPF and PSFModel == Winnie_PSF:
+    elif not(issubclass(FuncModel, InterpolatedUnivariateSpline_SPF)) and PSFModel == Winnie_PSF:
         model_image = jax_model_winnie(
             DiskModel, DistrModel, FuncModel, psf_params,
             pack_pars(disk_params, disk_params) if isinstance(disk_params, dict) else disk_params,
@@ -224,7 +224,7 @@ def objective_model(disk_params, spf_params, psf_params, misc_params,
             nx = misc_params['nx'], ny = misc_params['ny'], halfNbSlices=misc_params['halfNbSlices'],
             flux_scaling=misc_params['flux_scaling']
         )
-    elif FuncModel == InterpolatedUnivariateSpline_SPF and PSFModel != Winnie_PSF:
+    elif issubclass(FuncModel, InterpolatedUnivariateSpline_SPF) and PSFModel != Winnie_PSF:
         model_image = jax_model_spline(
             DiskModel, DistrModel, FuncModel, PSFModel,
             pack_pars(disk_params, disk_params) if isinstance(disk_params, dict) else disk_params,
@@ -232,7 +232,7 @@ def objective_model(disk_params, spf_params, psf_params, misc_params,
             PSFModel.pack_pars(psf_params) if isinstance(psf_params, dict) else psf_params,
             distance = misc_params['distance'], pxInArcsec = misc_params['pxInArcsec'],
             nx = misc_params['nx'], ny = misc_params['ny'], halfNbSlices=misc_params['halfNbSlices'],
-            flux_scaling=misc_params['flux_scaling'], knots=InterpolatedUnivariateSpline_SPF.get_knots(spf_params)
+            flux_scaling=misc_params['flux_scaling'], knots=FuncModel.get_knots(spf_params)
         )
     else:
         model_image = jax_model_spline_winnie(
@@ -241,7 +241,7 @@ def objective_model(disk_params, spf_params, psf_params, misc_params,
             spf_params['knot_values'],
             distance = misc_params['distance'], pxInArcsec = misc_params['pxInArcsec'],
             nx = misc_params['nx'], ny = misc_params['ny'], halfNbSlices=misc_params['halfNbSlices'],
-            flux_scaling=misc_params['flux_scaling'], knots=InterpolatedUnivariateSpline_SPF.get_knots(spf_params)
+            flux_scaling=misc_params['flux_scaling'], knots=FuncModel.get_knots(spf_params)
         )
 
     return model_image
@@ -298,7 +298,7 @@ def objective_fit(params_fit, fit_keys, disk_params, spf_params, psf_params, mis
             temp_misc_params[key] = params_fit[param_index]
         param_index += 1
 
-    if FuncModel != InterpolatedUnivariateSpline_SPF and PSFModel != Winnie_PSF:
+    if not(issubclass(FuncModel, InterpolatedUnivariateSpline_SPF)) and PSFModel != Winnie_PSF:
         model_image = jax_model(
             DiskModel, DistrModel, FuncModel, PSFModel,
             pack_pars(temp_disk_params, disk_params) if isinstance(disk_params, dict) else disk_params,
@@ -308,7 +308,7 @@ def objective_fit(params_fit, fit_keys, disk_params, spf_params, psf_params, mis
             nx = misc_params['nx'], ny = misc_params['ny'], halfNbSlices=misc_params['halfNbSlices'],
             flux_scaling=misc_params['flux_scaling']
         )
-    elif FuncModel != InterpolatedUnivariateSpline_SPF and PSFModel == Winnie_PSF:
+    elif not(issubclass(FuncModel, InterpolatedUnivariateSpline_SPF)) and PSFModel == Winnie_PSF:
         model_image = jax_model_winnie(
             DiskModel, DistrModel, FuncModel, psf_params,
             pack_pars(temp_disk_params, disk_params) if isinstance(disk_params, dict) else disk_params,
@@ -317,7 +317,7 @@ def objective_fit(params_fit, fit_keys, disk_params, spf_params, psf_params, mis
             nx = misc_params['nx'], ny = misc_params['ny'], halfNbSlices=misc_params['halfNbSlices'],
             flux_scaling=misc_params['flux_scaling']
         )
-    elif FuncModel == InterpolatedUnivariateSpline_SPF and PSFModel != Winnie_PSF:
+    elif issubclass(FuncModel, InterpolatedUnivariateSpline_SPF) and PSFModel != Winnie_PSF:
 
         model_image = jax_model_spline(
             DiskModel, DistrModel, FuncModel, PSFModel,
@@ -326,7 +326,7 @@ def objective_fit(params_fit, fit_keys, disk_params, spf_params, psf_params, mis
             PSFModel.pack_pars(temp_psf_params) if isinstance(psf_params, dict) else psf_params,
             distance = misc_params['distance'], pxInArcsec = misc_params['pxInArcsec'],
             nx = misc_params['nx'], ny = misc_params['ny'], halfNbSlices=misc_params['halfNbSlices'],
-            flux_scaling=misc_params['flux_scaling'], knots=InterpolatedUnivariateSpline_SPF.get_knots(temp_spf_params)
+            flux_scaling=misc_params['flux_scaling'], knots=FuncModel.get_knots(temp_spf_params)
         )
     else:
         model_image = jax_model_spline_winnie(
@@ -335,7 +335,7 @@ def objective_fit(params_fit, fit_keys, disk_params, spf_params, psf_params, mis
             temp_spf_params['knot_values'],
             distance = misc_params['distance'], pxInArcsec = misc_params['pxInArcsec'],
             nx = misc_params['nx'], ny = misc_params['ny'], halfNbSlices=misc_params['halfNbSlices'],
-            flux_scaling=misc_params['flux_scaling'], knots=InterpolatedUnivariateSpline_SPF.get_knots(temp_spf_params)
+            flux_scaling=misc_params['flux_scaling'], knots=FuncModel.get_knots(temp_spf_params)
         )
 
     result = residuals(target_image,err_map,model_image)

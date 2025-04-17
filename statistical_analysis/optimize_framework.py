@@ -177,6 +177,20 @@ class Optimizer:
             
         self.spf_params['knot_values'] = self.spf_params['knot_values'] * knot_scale
 
+        if self.FuncModel == FixedInterpolatedUnivariateSpline_SPF:
+            adjust_scale = 1.0 / InterpolatedUnivariateSpline_SPF.compute_phase_function_from_cosphi(
+                InterpolatedUnivariateSpline_SPF.init(self.spf_params['knot_values'], InterpolatedUnivariateSpline_SPF.get_knots(self.spf_params)),
+                0.0)
+            self.spf_params['knot_values'] = self.spf_params['knot_values'] * adjust_scale
+            self.misc_params['flux_scaling'] = self.misc_params['flux_scaling'] / adjust_scale
+
+    def scale_spline_to_fixed_point(self, cosphi, spline_val):
+        adjust_scale = spline_val / InterpolatedUnivariateSpline_SPF.compute_phase_function_from_cosphi(
+            InterpolatedUnivariateSpline_SPF.init(self.spf_params['knot_values'], InterpolatedUnivariateSpline_SPF.get_knots(self.spf_params)),
+            cosphi)
+        self.spf_params['knot_values'] = self.spf_params['knot_values'] * adjust_scale
+        self.misc_params['flux_scaling'] = self.misc_params['flux_scaling'] / adjust_scale
+
     def print_params(self):
         print("Disk Params: " + str(self.disk_params))
         print("SPF Params: " + str(self.spf_params))
