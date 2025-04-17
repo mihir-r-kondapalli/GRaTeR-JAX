@@ -221,7 +221,7 @@ class DoubleHenyeyGreenstein_SPF(Jax_class):
         return hg1+hg2
     
 
-# Uses 10 knots by default
+# Uses 6 knots by default
 # Values must be cos(phi) not phi
 class InterpolatedUnivariateSpline_SPF(Jax_class):
     """
@@ -250,6 +250,70 @@ class InterpolatedUnivariateSpline_SPF(Jax_class):
         Also has inclination bounds which help narrow the spline fit
         """    
         return InterpolatedUnivariateSpline(knots, p_arr)
+    
+    @classmethod
+    @partial(jax.jit, static_argnums=(0))
+    def compute_phase_function_from_cosphi(cls, spline_model, cos_phi):
+        """
+        Compute the phase function at (a) specific scattering scattering
+        angle(s) phi. The argument is not phi but cos(phi) for optimization
+        reasons.
+
+        Parameters
+        ----------
+        spline_model : InterpolatedUnivariateSpline
+            spline model to represent scattering light phase function
+        cos_phi : float or array
+            cosine of the scattering angle(s) at which the scattering function
+            must be calculated.
+        """
+        
+        return spline_model(cos_phi)
+    
+# Uses 5 knots by default (1 knot is added at (cos(90 degrees), 1))
+# Values must be cos(phi) not phi
+class FixedInterpolatedUnivariateSpline_SPF(InterpolatedUnivariateSpline_SPF):
+    """
+    Implementation of a spline scattering phase function. Uses 6 knots by default, takes knot y values as parameters.
+    Locations are fixed to the given knots, pack_pars and init both return the spline model itself
+    """
+
+    params = {'low_bound': -1, 'up_bound': 1, 'num_knots': 6, 'knot_values': jnp.ones(6)}
+
+    @classmethod
+    @partial(jax.jit, static_argnums=(0))
+    def init(cls, p_arr, knots = jnp.linspace(1, -1, 6)):
+        """
+        """
+        return cls.pack_pars(p_arr, knots=knots)
+    
+    @classmethod
+    def get_knots(cls, p_dict):
+        if p_dict['num_knots'] % 2 == 1:
+            raise ValueError(f"Number of knots: {p_dict['num_knots']} must be an even number.")
+        else:
+            full = jnp.linspace(p_dict['up_bound'], p_dict['low_bound'], p_dict['num_knots'] + 1)
+            mid_idx = jnp.argmin(jnp.abs(full))  # closest to 0
+            return jnp.concatenate([full[:mid_idx], full[mid_idx+1:]])
+
+    @classmethod
+    @partial(jax.jit, static_argnums=(0))
+    def pack_pars(cls, p_arr, knots = jnp.linspace(1, -1, 6), fixed_val = 1.0):
+        """
+        This function takes a array of (knots) values and converts them into an InterpolatedUnivariateSpline model.
+        Also has inclination bounds which help narrow the spline fit
+        """
+
+        # Add the point (0, 1)
+        knots_aug = jnp.append(knots, jnp.atleast_1d(0.0)) # Only fixed at 90 degrees
+        p_arr_aug = jnp.append(p_arr, jnp.atleast_1d(fixed_val))
+
+        # Sort based on x values
+        sort_idx = jnp.argsort(knots_aug)
+        knots_sorted = knots_aug[sort_idx]
+        p_arr_sorted = p_arr_aug[sort_idx]
+
+        return InterpolatedUnivariateSpline(knots_sorted, p_arr_sorted)
     
     @classmethod
     @partial(jax.jit, static_argnums=(0))
@@ -316,7 +380,6 @@ class EMP_PSF(Jax_class):
     @partial(jax.jit, static_argnums=(0))
     def generate(cls, image, psf_params):
         return jss.convolve2d(image, cls.img, mode='same')
-    
 
 class Winnie_PSF(Jax_class):
 
