@@ -64,7 +64,7 @@ class Optimizer:
                 fit_keys.pop(key)
 
         init_x = np.concatenate([np.atleast_1d(x) for x in param_list])
-        soln = minimize(llp, init_x, method=None, options={'disp': True, 'max_itr': 500})
+        soln = minimize(llp, init_x, method=method, options={'disp': True, 'max_itr': 500})
 
         params = 0
         param_list = expand(soln.x)
