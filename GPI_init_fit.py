@@ -20,15 +20,21 @@ from utils.SLD_utils import *
 def init_fit(name,spf_type='spline',plot=True,save=False,mc=False,num_knots=6):
     fits_image_filepath = "/home/blewis/GPI_data/" + str(name) + ".fits"
     hdul = fits.open(fits_image_filepath)
-    target_image = OptimizeUtils.process_image(hdul['SCI'].data[1,:,:],bounds=(50, 230, 50, 230))
-    err_map = OptimizeUtils.process_image(OptimizeUtils.create_empirical_err_map(hdul['SCI'].data[2,:,:]),bounds=(50, 230, 50, 230)) #, outlier_pixels=[(57, 68)]))
+    if '4796' in name:
+        target_image = OptimizeUtils.process_image(hdul['SCI'].data[1,:,:],bounds=(50, 230, 50, 230))
+        err_map = OptimizeUtils.process_image(OptimizeUtils.create_empirical_err_map(hdul['SCI'].data[2,:,:]),bounds=(50, 230, 50, 230))
+        misc_params = Parameter_Index.misc_params
+        misc_params['nx'] = 180
+        misc_params['ny'] = 180 #, outlier_pixels=[(57, 68)]))
+    else:
+        target_image = OptimizeUtils.process_image(hdul['SCI'].data[1,:,:])
+        err_map = OptimizeUtils.process_image(OptimizeUtils.create_empirical_err_map(hdul['SCI'].data[2,:,:])) #, outlier_pixels=[(57, 68)]))
+        misc_params = Parameter_Index.misc_params
+
     if spf_type=='spline':
         spf_params = InterpolatedUnivariateSpline_SPF.params
         psf_params = EMP_PSF.params
         disk_params = Parameter_Index.disk_params
-        misc_params = Parameter_Index.misc_params
-        misc_params['nx'] = 180
-        misc_params['ny'] = 180
 
         image_data = pd.read_csv('statistical_analysis/image_info_filt.csv')
         image_data.set_index("Name", inplace=True)
@@ -79,20 +85,20 @@ def init_fit(name,spf_type='spline',plot=True,save=False,mc=False,num_knots=6):
         for ax in axes:
             ax.tick_params(axis='both', which='major', labelsize=12)
 
-        im = axes[0].imshow(target_image, origin='lower', cmap='inferno',extent=extent)
+        im = axes[0].imshow(target_image, origin='lower', cmap='inferno',extent=extent,vmin=vmin,vmax=vmax)
         axes[0].set_title("Data",fontsize=16)
         axes[0].set_ylabel('$\Delta$RA (arcsec)',fontsize=14)
         axes[0].set_xlabel('$\Delta$Dec (arcsec)',fontsize=14)
         #plt.colorbar(im, ax=axes[0], shrink=0.5)
         im.set_clim(vmin, vmax)
 
-        im = axes[1].imshow(optimal_image, origin='lower', cmap='inferno',extent=extent)
+        im = axes[1].imshow(optimal_image, origin='lower', cmap='inferno',extent=extent,vmin=vmin,vmax=vmax)
         axes[1].set_title("Model",fontsize=16)
         #plt.colorbar(im, ax=axes[1], shrink=0.5)
         im.set_clim(vmin, vmax)
         axes[1].set_xlabel('$\Delta$Dec (arcsec)',fontsize=14)
 
-        im = axes[2].imshow(target_image-optimal_image, origin='lower', cmap='inferno',extent=extent)
+        im = axes[2].imshow(target_image-optimal_image, origin='lower', cmap='inferno',extent=extent,vmin=vmin,vmax=10)
         axes[2].set_title("Residuals",fontsize=16)
         im.set_clim(vmin, vmax)
         axes[2].set_xlabel('$\Delta$Dec (arcsec)',fontsize=14)
@@ -145,7 +151,7 @@ def init_fit(name,spf_type='spline',plot=True,save=False,mc=False,num_knots=6):
             im.set_clim(vmin, vmax)
             axes[1].set_xlabel('$\Delta$Dec (arcsec)',fontsize=14)
 
-            im = axes[2].imshow(target_image-img, origin='lower', cmap='inferno',extent=extent)
+            im = axes[2].imshow(target_image-img, origin='lower', cmap='inferno',extent=extent,vmax=np.max(img))
             axes[2].set_title("Residuals",fontsize=16)
             im.set_clim(vmin, vmax)
             axes[2].set_xlabel('$\Delta$Dec (arcsec)',fontsize=14)
