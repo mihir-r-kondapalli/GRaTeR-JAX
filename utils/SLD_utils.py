@@ -44,20 +44,45 @@ class DustEllipticalDistribution2PowerLaws(Jax_class):
     """
     """
 
-    params = {'ain': 5., 'aout': -5., 'a': 60., 'e': 0., 'ksi0': 1.,'gamma': 2., 'beta': 1.,
-                        'amin': 0., 'dens_at_r0': 1., 'accuracy': 5.e-3, 'zmax': 0., "p": 0., "rmax": 0.,
-                        'pmin': 0., "apeak": 0., "apeak_surface_density": 0., "itiltthreshold": 0.}
+    params = {'alpha_in': 5., 'alpha_out': -5., 'sma': 60., 'e': 0., 'ksi0': 1.,'gamma': 2., 'beta': 1.,
+                        'rmin': 0., 'dens_at_r0': 1., 'accuracy': 5.e-3, 'zmax': 0., "p": 0., "rmax": 0.,
+                        'pmin': 0., "rpeak": 0., "rpeak_surface_density": 0., "itiltthreshold": 0.}
 
     @classmethod
     @partial(jax.jit, static_argnums=(0,))
-    def init(cls, accuracy=5.e-3, ain=5., aout=-5., a=60., e=0., ksi0=1., gamma=2., beta=1., amin=0., dens_at_r0=1.):
+    def init(cls, accuracy=5.e-3, alpha_in=5., alpha_out=-5., sma=60., e=0., ksi0=1., gamma=2., beta=1., rmin=0., dens_at_r0=1.):
         """
         Constructor for the Dust_distribution class.
 
         We assume the dust density is 0 radially after it drops below 0.5%
         (the accuracy variable) of the peak density in
         the midplane, and vertically whenever it drops below 0.5% of the
-        peak density in the midplane
+        peak density in the midplane.
+
+        Based off of code from VIP disk forward modeling by Julien Milli
+
+        Parameters
+        ----------
+        accuracy : float
+            Density limit as described above. Default is 5.e-3.
+        alpha_in : float
+            slope of the power-low distribution in the inner disk. It must be positive (default 5)
+        alpha_out : float
+            slope of the power-low distribution in the outer disk. It must be negative (default -5)
+        sma : float
+            reference radius in au (default 60)
+        e : float
+            eccentricity (default 0)
+        ksi0 : float
+            scale height in au at the reference radius (default 1 a.u.)
+        gamma : float
+            exponent (2=gaussian,1=exponential profile, default 2)
+        beta : float
+            flaring index (0=no flaring, 1=linear flaring, default 1)
+        rmin : float
+            minimum semi-major axis: the dust density is 0 below this value (default 0)
+
+        Other kwargs / params are generated from the above parameters.
         """
 
         p_dict = {}
@@ -74,30 +99,30 @@ class DustEllipticalDistribution2PowerLaws(Jax_class):
         beta = jnp.where(beta < 0., 0., beta)
 
         # Set Radial Density Analogue
-        ain = jnp.where(ain < 0.01, 0.01, ain)
-        aout = jnp.where(aout > -0.01, -0.01, aout)
+        alpha_in = jnp.where(alpha_in < 0.01, 0.01, alpha_in)
+        alpha_out = jnp.where(alpha_out > -0.01, -0.01, alpha_out)
         e = jnp.where(e < 0., 0., e)
         e = jnp.where(e >= 1, 0.99, e)
-        amin = jnp.where(amin < 0., 0., amin)
+        rmin = jnp.where(rmin < 0., 0., rmin)
         dens_at_r0 = jnp.where(dens_at_r0 < 0., 0., dens_at_r0)
 
-        p_dict["ain"] = ain
-        p_dict["aout"] = aout
-        p_dict["a"] = a
+        p_dict["alpha_in"] = alpha_in
+        p_dict["alpha_out"] = alpha_out
+        p_dict["sma"] = sma
         p_dict["e"] = e
-        p_dict["p"] = p_dict["a"]*(1-p_dict["e"]**2)
-        p_dict["amin"] = amin
+        p_dict["p"] = p_dict["sma"]*(1-p_dict["e"]**2)
+        p_dict["rmin"] = rmin
         # we assume the inner hole is also elliptic (convention)
-        p_dict["pmin"] = p_dict["amin"]*(1-p_dict["e"]**2)
+        p_dict["pmin"] = p_dict["rmin"]*(1-p_dict["e"]**2)
         p_dict["dens_at_r0"] = dens_at_r0
 
         # maximum distance of integration, AU
-        p_dict["rmax"] = p_dict["a"]*p_dict["accuracy"]**(1/(p_dict["aout"]+1e-8))
-        p_dict["apeak"] = p_dict["a"] * jnp.power(-p_dict["ain"]/(p_dict["aout"]+1e-8),
-                                        1./(2.*(p_dict["ain"]-p_dict["aout"])))
-        Gamma_in = jnp.abs(p_dict["ain"]+p_dict["beta"] + 1e-8)
-        Gamma_out = -jnp.abs(p_dict["aout"]+p_dict["beta"] + 1e-8)
-        p_dict["apeak_surface_density"] = p_dict["a"] * jnp.power(-Gamma_in/Gamma_out,
+        p_dict["rmax"] = p_dict["sma"]*p_dict["accuracy"]**(1/(p_dict["alpha_out"]+1e-8))
+        p_dict["rpeak"] = p_dict["sma"] * jnp.power(-p_dict["alpha_in"]/(p_dict["alpha_out"]+1e-8),
+                                        1./(2.*(p_dict["alpha_in"]-p_dict["alpha_out"])))
+        Gamma_in = jnp.abs(p_dict["alpha_in"]+p_dict["beta"] + 1e-8)
+        Gamma_out = -jnp.abs(p_dict["alpha_out"]+p_dict["beta"] + 1e-8)
+        p_dict["rpeak_surface_density"] = p_dict["sma"] * jnp.power(-Gamma_in/Gamma_out,
                                                         1./(2.*(Gamma_in-Gamma_out+1e-8)))
         # the above formula comes from Augereau et al. 1999.
         p_dict["itiltthreshold"] = jnp.rad2deg(jnp.arctan(p_dict["rmax"]/p_dict["zmax"]))
@@ -113,8 +138,8 @@ class DustEllipticalDistribution2PowerLaws(Jax_class):
 
         radial_ratio = r*(1-distr["e"]*costheta)/((distr["p"])+1e-8)
 
-        den = (jnp.power(jnp.abs(radial_ratio)+1e-8, -2*distr["ain"]) +
-               jnp.power(jnp.abs(radial_ratio)+1e-8, -2*distr["aout"]))
+        den = (jnp.power(jnp.abs(radial_ratio)+1e-8, -2*distr["alpha_in"]) +
+               jnp.power(jnp.abs(radial_ratio)+1e-8, -2*distr["alpha_out"]))
         radial_density_term = jnp.sqrt(2./den+1e-8)*distr["dens_at_r0"]
         #if distr["pmin"] > 0:
         #    radial_density_term[r/(distr["pmin"]/(1-distr["e"]*costheta)) <= 1] = 0
@@ -142,7 +167,7 @@ class HenyeyGreenstein_SPF(Jax_class):
 
         Parameters
         ----------
-        spf_dico :  dictionnary containing the key "g" (float)
+        spf_dico :  dictionary containing the key "g" (float)
             g is the Heyney Greenstein coefficient and should be between -1
             (backward scattering) and 1 (forward scattering).
         """
@@ -179,6 +204,17 @@ class DoubleHenyeyGreenstein_SPF(Jax_class):
     """
     Implementation of a scattering phase function with a double Henyey
     Greenstein function.
+
+    Parameters
+    ----------
+    g1: float
+        the first Heyney Greenstein coefficient and should be between -1
+        (backward scattering) and 1 (forward scattering)
+    g2: float
+        the second Heyney Greenstein coefficient and should be between -1
+        (backward scattering) and 1 (forward scattering)
+    weight: float
+        weighting of the first Henyey Greenstein component
     """
 
     params = {'g1': 0.5, 'g2': -0.3, 'weight': 0.7}
@@ -227,6 +263,17 @@ class InterpolatedUnivariateSpline_SPF(Jax_class):
     """
     Implementation of a spline scattering phase function. Uses 6 knots by default, takes knot y values as parameters.
     Locations are fixed to the given knots, pack_pars and init both return the spline model itself
+
+    Parameters
+    ----------
+    low_bound: float
+        cosine of lower bound on scattering angle used for the spline
+    up_bound: float
+        cosine of upper bound on scattering angle used for the spline
+    num_knots: int
+        number of knots
+    knot_values: array
+        y values of the knots
     """
 
     params = {'low_bound': -1, 'up_bound': 1, 'num_knots': 6, 'knot_values': jnp.ones(6)}
@@ -275,7 +322,19 @@ class InterpolatedUnivariateSpline_SPF(Jax_class):
 class FixedInterpolatedUnivariateSpline_SPF(InterpolatedUnivariateSpline_SPF):
     """
     Implementation of a spline scattering phase function. Uses 6 knots by default, takes knot y values as parameters.
-    Locations are fixed to the given knots, pack_pars and init both return the spline model itself
+    Locations are fixed to the given knots, pack_pars and init both return the spline model itself. 
+    Uses 5 knots by default (1 knot is added at (cos(90 degrees), 1))
+
+    Parameters
+    ----------
+    low_bound: float
+        cosine of lower bound on scattering angle used for the spline
+    up_bound: float
+        cosine of upper bound on scattering angle used for the spline
+    num_knots: int
+        number of knots
+    knot_values: array
+        y values of the knots
     """
 
     params = {'low_bound': -1, 'up_bound': 1, 'num_knots': 6, 'knot_values': jnp.ones(6)}
@@ -337,6 +396,25 @@ class FixedInterpolatedUnivariateSpline_SPF(InterpolatedUnivariateSpline_SPF):
 
 class GAUSSIAN_PSF(Jax_class):
 
+    """
+    Creates a Gaussian PSF model. The PSF is defined by the following parameters:
+
+    Parameters
+    ----------
+    FWHM : float
+        Full width at half maximum of the Gaussian PSF.
+    xo : float
+        X coordinate of the center of the PSF.
+    yo : float 
+        Y coordinate of the center of the PSF.
+    theta : float   
+        Rotation angle of the PSF in radians.
+    offset : float
+        Offset value to be added to the PSF.
+    amplitude : float
+        Amplitude of the PSF.
+    """
+
     params = {'FWHM': 3., 'xo': 0., 'yo': 0., 'theta': 0., 'offset': 0., 'amplitude': 1.}
 
     #define model function and pass independant variables x and y as a list
@@ -363,6 +441,19 @@ class EMP_PSF(Jax_class):
     params = {'scale_factor': 1, 'offset': 1}
 
     def process_image(image, scale_factor=1, offset=1):
+        """
+        This function takes an image and processes it by scaling, cropping, and converting to float32.
+        It also handles NaN values and converts them to 0.
+
+        Parameters
+        ----------
+        image : numpy.ndarray
+            The input image to be processed.
+        scale_factor : int
+            The factor by which to scale the image.
+        offset : int    
+            The center offset to be added to the image. CURRENTLY NOT
+        """
         scaled_image = (image[::scale_factor, ::scale_factor])[1::, 1::]
         cropped_image = image[70:210, 70:210]
         def safe_float32_conversion(value):
@@ -383,7 +474,9 @@ class EMP_PSF(Jax_class):
         return jss.convolve2d(image, cls.img, mode='same')
 
 class Winnie_PSF(Jax_class):
-
+    """
+    Creates a JWST PSF model, using the package Winnie. See Winnie for further JWST PSF documentation.
+    """
     @classmethod
     @partial(jax.jit, static_argnames=['cls', 'num_unique_psfs'])
     def init(cls, psfs, psf_inds_rolls, im_mask_rolls, psf_offsets, psf_parangs, num_unique_psfs):
