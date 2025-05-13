@@ -40,7 +40,7 @@ class Optimizer:
             index = 0
             for key in fit_keys:
                 if key == "knot_values":
-                    new_list.append(x[index:index+self.spf_params['num_knots']])
+                    new_list.append(np.exp(x[index:index+self.spf_params['num_knots']]))
                     index+=self.spf_params['num_knots']
                 else:
                     new_list.append(x[index])
@@ -55,7 +55,10 @@ class Optimizer:
             if key in self.disk_params:
                 param_list.append(self.disk_params[key])
             elif key in self.spf_params:
-                param_list.append(self.spf_params[key])
+                if key == 'knot_values':
+                    param_list.append(np.log(self.spf_params[key]))
+                else:
+                    param_list.append(self.spf_params[key])
             elif key in self.psf_params:
                 param_list.append(self.psf_params[key])
             elif key in self.misc_params:
@@ -74,7 +77,7 @@ class Optimizer:
             for key, low, high in zip(fit_keys, lower_bounds, upper_bounds):
                 if key == "knot_values":
                     for l, h in zip(low, high):  # each is an array
-                        bounds.append((l, h))
+                        bounds.append((np.log(l+1e-14), np.log(h)))
                 else:
                     bounds.append((low, high))
             soln = minimize(llp, init_x, method='L-BFGS-B', bounds=bounds, options={'disp': True, 'max_itr': iters})
