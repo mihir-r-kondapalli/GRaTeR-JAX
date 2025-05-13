@@ -64,15 +64,17 @@ def init_fit(name,spf_type='spline',plot=True,save=False,mc=False,num_knots=6):
         opt.scale_knots(target_image)
         soln = opt.scipy_optimize(fit_keys, target_image, err_map, disp_soln=True,iters = 1000)
         opt.scale_spline_to_fixed_point(0, 1)
+        spf_soln = opt.spf_params
         optimal_image = opt.model()
         optimal_ll = opt.log_likelihood(target_image,err_map)
         knots = opt.spf_params['knot_values']
         angles = np.linspace(np.rad2deg(np.arccos(opt.spf_params['up_bound'])),np.rad2deg(np.arccos(opt.spf_params['low_bound'])),spf_params['num_knots'])
         titles = 'alpha_in, alpha_out, sma, e, ksi0, gamma, beta, omega, inclination, position_angle, x_center, y_center, flux, k1, k2, k3, k4, k5, k6, k7, k8, k9, k10, k11'
         if save==True:
-            np.savetxt('../GPI_results/{}_init_fit_params_{}knots.txt'.format(name,num_knots),soln.x,header=titles)
-            np.savetxt('../GPI_results/{}_init_fit_knotvals_{}knots.txt'.format(name,num_knots),knots,header=titles)
-            np.savetxt('../GPI_results/{}_init_fit_angles_{}knots.txt'.format(name,num_knots),angles,header=titles)
+            #np.savetxt('../GPI_results/{}_init_fit_params_{}knots.txt'.format(name,num_knots),soln.x,header=titles)
+            #np.savetxt('../GPI_results/{}_init_fit_knotvals_{}knots.txt'.format(name,num_knots),knots,header=titles)
+            #np.savetxt('../GPI_results/{}_init_fit_angles_{}knots.txt'.format(name,num_knots),angles,header=titles)
+            pass
     if plot==True:
         fig, axes = plt.subplots(1,3, figsize=(20,10))
         mask = OptimizeUtils.get_mask(target_image)
@@ -110,7 +112,7 @@ def init_fit(name,spf_type='spline',plot=True,save=False,mc=False,num_knots=6):
 
     opt.print_params()
     if mc==False:
-        return optimal_image, soln.x, optimal_ll, knots, angles
+        return optimal_image, soln.x, optimal_ll, spf_soln
 
     if mc==True:
         if bounds==None:
