@@ -3,7 +3,7 @@ from statistical_analysis.regression import log_likelihood_1d_pos_all_pars_splin
 from disk_utils_jax import jax_model_all_1d, jax_model_all_1d_cent, jax_model_all_1d_full
 from scipy.optimize import minimize
 import jaxopt
-from SLD_utils import *
+from utils.old_SLD_utils import *
 import jax.numpy as jnp
 
 
