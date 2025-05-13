@@ -27,23 +27,6 @@ class Optimizer:
 
     def log_likelihood_pos(self, target_image, err_map):
         return -log_likelihood(self.model(), target_image, err_map)
-    
-    def grad(self, fit_keys, target_image, err_map):
-        param_list = []
-        for key in fit_keys:
-            if key in self.disk_params:
-                param_list.append(self.disk_params[key])
-            elif key in self.spf_params:
-                param_list.append(self.spf_params[key])
-            elif key in self.psf_params:
-                param_list.append(self.psf_params[key])
-            elif key in self.misc_params:
-                param_list.append(self.misc_params[key])
-            else:
-                print(key + " not in any of the parameter dictionaries!")
-                fit_keys.pop(key)
-
-        
 
     def log_likelihood(self, target_image, err_map):
         return log_likelihood(self.model(), target_image, err_map)
@@ -208,7 +191,7 @@ class Optimizer:
         self.spf_params['low_bound'] = jnp.cos(jnp.deg2rad(90+self.disk_params['inclination']+buffer))
         return self.spf_params
     
-    def scale_knots(self, target_image, dhg_params = [0.5, 0.5, 0.5]):
+    def scale_initial_knots(self, target_image, dhg_params = [0.5, 0.5, 0.5]):
         ## Get a good scaling
         y, x = np.indices(target_image.shape)
         y -= 70
