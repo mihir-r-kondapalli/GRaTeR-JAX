@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 
 class Parameter_Index:
     
-    disk_params = {'accuracy': 5.e-3, 'alpha_in': 5, 'alpha_out': -5, 'sma': 50, 'e': 0., 'ksi0': 3., 'gamma': 2., 'beta': 1., 'amin': 0.,
+    disk_params = {'accuracy': 5.e-3, 'alpha_in': 5, 'alpha_out': -5, 'sma': 50, 'e': 0., 'ksi0': 3., 'gamma': 2., 'beta': 1., 'rmin': 0.,
                 'dens_at_r0': 1., 'inclination': 0, 'position_angle': 0, 'x_center': 70., 'y_center': 70., 'halfNbSlices': 25, 'omega': 0.,}
 
     misc_params = {'distance': 50., 'pxInArcsec': 0.01414, 'nx': 140, 'ny': 140, 'halfNbSlices': 25, 'flux_scaling': 1e6}  # Don't change this
@@ -32,9 +32,9 @@ def pack_pars(p_dict, orig_dict):
 def jax_model(DiskModel, DistrModel, FuncModel, PSFModel, disk_params, spf_params, psf_params, distance = 0., pxInArcsec = 0.,
               nx = 140, ny = 140, halfNbSlices = 25, flux_scaling = 1e6):
 
-    distr_params = DistrModel.init(accuracy=disk_params[0], ain=disk_params[1], aout=disk_params[2], a=disk_params[3],
+    distr_params = DistrModel.init(accuracy=disk_params[0], alpha_in=disk_params[1], alpha_out=disk_params[2], sma=disk_params[3],
                                    e=disk_params[4], ksi0=disk_params[5], gamma=disk_params[6], beta=disk_params[7],
-                                   amin=disk_params[8], dens_at_r0=disk_params[9])
+                                   rmin=disk_params[8], dens_at_r0=disk_params[9])
     disk_params_jax = DiskModel.init(distr_params, disk_params[10], disk_params[11],
                                               disk_params[1], disk_params[2], disk_params[3],
                                               nx=nx, ny=ny, distance = distance,
@@ -74,9 +74,9 @@ def jax_model(DiskModel, DistrModel, FuncModel, PSFModel, disk_params, spf_param
 def jax_model_winnie(DiskModel, DistrModel, FuncModel, winnie_psf, disk_params, spf_params, distance = 0., pxInArcsec = 0.,
               nx = 140, ny = 140, halfNbSlices = 25, flux_scaling = 1e6):
 
-    distr_params = DistrModel.init(accuracy=disk_params[0], ain=disk_params[1], aout=disk_params[2], a=disk_params[3],
+    distr_params = DistrModel.init(accuracy=disk_params[0], alpha_in=disk_params[1], alpha_out=disk_params[2], sma=disk_params[3],
                                    e=disk_params[4], ksi0=disk_params[5], gamma=disk_params[6], beta=disk_params[7],
-                                   amin=disk_params[8], dens_at_r0=disk_params[9])
+                                   rmin=disk_params[8], dens_at_r0=disk_params[9])
     disk_params_jax = DiskModel.init(distr_params, disk_params[10], disk_params[11],
                                               disk_params[1], disk_params[2], disk_params[3],
                                               nx=nx, ny=ny, distance = distance,
@@ -115,9 +115,9 @@ def jax_model_winnie(DiskModel, DistrModel, FuncModel, winnie_psf, disk_params, 
 def jax_model_spline(DiskModel, DistrModel, FuncModel, PSFModel, disk_params, spf_params, psf_params, distance = 0., pxInArcsec = 0.,
               nx = 140, ny = 140, halfNbSlices = 25, flux_scaling = 1e6, knots=jnp.linspace(1,-1,6)):
 
-    distr_params = DistrModel.init(accuracy=disk_params[0], ain=disk_params[1], aout=disk_params[2], a=disk_params[3],
+    distr_params = DistrModel.init(accuracy=disk_params[0], alpha_in=disk_params[1], alpha_out=disk_params[2], sma=disk_params[3],
                                    e=disk_params[4], ksi0=disk_params[5], gamma=disk_params[6], beta=disk_params[7],
-                                   amin=disk_params[8], dens_at_r0=disk_params[9])
+                                   rmin=disk_params[8], dens_at_r0=disk_params[9])
     disk_params_jax = DiskModel.init(distr_params, disk_params[10], disk_params[11],
                                               disk_params[1], disk_params[2], disk_params[3],
                                               nx=nx, ny=ny, distance = distance,
@@ -159,9 +159,9 @@ def jax_model_spline(DiskModel, DistrModel, FuncModel, PSFModel, disk_params, sp
 def jax_model_spline_winnie(DiskModel, DistrModel, FuncModel, winnie_psf, disk_params, spf_params, distance = 0., pxInArcsec = 0.,
               nx = 140, ny = 140, halfNbSlices = 25, flux_scaling = 1e6, knots=jnp.linspace(1,-1,6)):
 
-    distr_params = DistrModel.init(accuracy=disk_params[0], ain=disk_params[1], aout=disk_params[2], a=disk_params[3],
+    distr_params = DistrModel.init(accuracy=disk_params[0], alpha_in=disk_params[1], alpha_out=disk_params[2], sma=disk_params[3],
                                    e=disk_params[4], ksi0=disk_params[5], gamma=disk_params[6], beta=disk_params[7],
-                                   amin=disk_params[8], dens_at_r0=disk_params[9])
+                                   rmin=disk_params[8], dens_at_r0=disk_params[9])
     disk_params_jax = DiskModel.init(distr_params, disk_params[10], disk_params[11],
                                               disk_params[1], disk_params[2], disk_params[3],
                                               nx=nx, ny=ny, distance = distance,
