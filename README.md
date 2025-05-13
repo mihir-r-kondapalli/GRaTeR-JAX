@@ -39,8 +39,8 @@ GRaTeR-JAX/
 │── utils/                 # Utility functions for modeling and optimization
 │── statistical-analysis/  # Example Jupyter notebooks
 │── webbpsf-data           # PSF data for various instruments
-│── cds/                   # Utility files for WebbPSF convolution
-│── PSFs/                   # PSF data
+│── cdbs/                  # Utility files for WebbPSF convolution
+│── PSFs/                  # PSF data
 │── requirements.txt       # Dependencies
 │── README.md              # This document
 ```
