@@ -98,6 +98,7 @@ class Optimizer:
             params+=1
 
         self.fix_negative_spline_params_to_zero()
+        self.fix_negative_eccentricity_to_zero()
 
         if disp_soln:
             print(soln)
@@ -232,6 +233,10 @@ class Optimizer:
     def fix_negative_spline_params_to_zero(self):
         if issubclass(self.FuncModel, InterpolatedUnivariateSpline_SPF):
             self.spf_params['knot_values'] = np.where(self.spf_params['knot_values'] < 1e-8, 1e-8, self.spf_params['knot_values'])
+
+    def fix_negative_eccentricity_to_zero(self):
+        if self.disk_params['e']<0:
+            self.disk_params['e'] = 0
 
     def print_params(self):
         print("Disk Params: " + str(self.disk_params))
