@@ -27,6 +27,54 @@ class ScatteredLightDisk(Jax_class):
     Class used to generate a synthetic disc, inspired from a light version of
     the GRATER tool (GRenoble RAdiative TransfER) written originally in IDL
     [AUG99]_, and converted to Python by J. Milli.
+
+    Parameters
+        ----------
+        nx : int
+            number of pixels along the x axis of the image (default 200)
+        ny : int
+            number of pixels along the y axis of the image (default 200)
+        distance : float
+            distance to the star in pc (default 70.)
+        itilt : float
+            inclination wrt the line of sight in degrees (0 means pole-on,
+            90 means edge-on, default 60 degrees)
+        omega : float
+            argument of the pericenter in degrees (0 by default)
+        pxInArcsec : float
+            pixel field of view in arcsec/px (default the SPHERE pixel
+            scale 0.01225 arcsec/px)
+        pa : float
+            position angle of the disc in degrees (default 0 degrees, e.g. North)
+        distr_params : dict
+            Parameters describing the dust density distribution function
+            to be implemented. By default, it uses a two-power law dust
+            distribution with a vertical gaussian distribution with
+            linear flaring. For a two-power law distribution, you can set it with the following parameters:
+                    accuracy : float
+                        Density limit as described above. Default is 5.e-3.
+                    alpha_in : float
+                        slope of the power-low distribution in the inner disk. It must be positive (default 5)
+                    alpha_out : float
+                        slope of the power-low distribution in the outer disk. It must be negative (default -5)
+                    sma : float
+                        reference radius in au (default 60)
+                    e : float
+                        eccentricity (default 0)
+                    ksi0 : float
+                        scale height in au at the reference radius (default 1 a.u.)
+                    gamma : float
+                        exponent (2=gaussian,1=exponential profile, default 2)
+                    beta : float
+                        flaring index (0=no flaring, 1=linear flaring, default 1)
+                    rmin : float
+                        minimum semi-major axis: the dust density is 0 below this value (default 0)
+        xdo : float
+            disk offset along the x-axis in the disk frame (=semi-major axis),
+            in a.u. (default 0)
+        ydo : float
+            disk offset along the y-axis in the disk frame (=semi-minor axis),
+            in a.u. (default 0)
     """
 
     # Jax Parameters
@@ -46,7 +94,7 @@ class ScatteredLightDisk(Jax_class):
 
     @classmethod
     @partial(jax.jit, static_argnums=(0,))
-    def init(cls, distr_params, inc, pa, ain, aout, sma, nx=200, ny=200, distance=50., omega=0., pxInArcsec=0.01225, xdo=0., ydo=0.):
+    def init(cls, distr_params, itilt, pa, alpha_in, alpha_out, sma, nx=200, ny=200, distance=50., omega=0., pxInArcsec=0.01225, xdo=0., ydo=0.):
 
         p_dict = {}
 
@@ -64,7 +112,7 @@ class ScatteredLightDisk(Jax_class):
         p_dict["rmin"] = jnp.sqrt(p_dict["xdo"]**2+p_dict["ydo"]**2)+p_dict["pxInAU"]
         # star center along the y- and x-axis, in pixels
 
-        p_dict["itilt"] = inc  # inclination wrt the line of sight in deg
+        p_dict["itilt"] = itilt  # inclination wrt the line of sight in deg
         p_dict["cosi"] = jnp.cos(jnp.deg2rad(p_dict["itilt"]))
         p_dict["sini"] = jnp.sin(jnp.deg2rad(p_dict["itilt"]))
 
@@ -89,8 +137,19 @@ class ScatteredLightDisk(Jax_class):
 
         Parameters
         ----------
+        disk_params : dict
+            Parameters describing the disk, see above for full description
+        distr_params : dict
+            Parameters describing the dust density distribution function, also defined above
+        distr_cls : class
+            Class describing the dust density distribution function (nominally should be DustEllipticalDistribution2PowerLaws,
+            other distributions are not yet implemented)
+        phase_func_params : dict
+            Parameters describing the phase function, see your respective phase function class for full description
+        phase_func_cls : class
+            Class describing the phase function (options are HenyeyGreenstein_SPF, DoubleHenyeyGreenstein_SPF, InterpolatedUnivariateSpline_SPF)
         halfNbSlices : integer
-            half number of distances along the line of sight l
+            half number of distances along the line of sight
         """
 
         disk = cls.unpack_pars(disk_params)
