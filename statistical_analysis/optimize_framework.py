@@ -31,15 +31,16 @@ class Optimizer:
     def log_likelihood(self, target_image, err_map):
         return log_likelihood(self.model(), target_image, err_map)
 
-    def scipy_optimize(self, fit_keys, target_image, err_map,
-                       disp_opt=False, disp_soln=False, iters=500, grad=False, method=None, **kwargs):
+    def scipy_optimize(self, fit_keys, target_image, err_map, fit_bounds = None,
+                       disp_opt=False, disp_soln=False, iters=500, grad=False,
+                       method=None, **kwargs):
 
         def expand(x):
             new_list = []
             index = 0
             for key in fit_keys:
                 if key == "knot_values":
-                    new_list.append(x[index:index+self.spf_params['num_knots']])
+                    new_list.append(np.exp(x[index:index+self.spf_params['num_knots']]))
                     index+=self.spf_params['num_knots']
                 else:
                     new_list.append(x[index])
@@ -54,7 +55,10 @@ class Optimizer:
             if key in self.disk_params:
                 param_list.append(self.disk_params[key])
             elif key in self.spf_params:
-                param_list.append(self.spf_params[key])
+                if key == 'knot_values':
+                    param_list.append(np.log(self.spf_params[key]))
+                else:
+                    param_list.append(self.spf_params[key])
             elif key in self.psf_params:
                 param_list.append(self.psf_params[key])
             elif key in self.misc_params:
@@ -64,7 +68,19 @@ class Optimizer:
                 fit_keys.pop(key)
 
         init_x = np.concatenate([np.atleast_1d(x) for x in param_list])
-        soln = minimize(llp, init_x, method=method, options={'disp': True, 'max_itr': 500})
+
+        if(fit_bounds == None):
+            soln = minimize(llp, init_x, method=method, options={'disp': True, 'max_itr': iters})
+        else:
+            lower_bounds, upper_bounds = fit_bounds
+            bounds = []
+            for key, low, high in zip(fit_keys, lower_bounds, upper_bounds):
+                if key == "knot_values":
+                    for l, h in zip(low, high):  # each is an array
+                        bounds.append((np.log(l+1e-14), np.log(h)))
+                else:
+                    bounds.append((low, high))
+            soln = minimize(llp, init_x, method='L-BFGS-B', bounds=bounds, options={'disp': True, 'max_itr': iters})
 
         params = 0
         param_list = expand(soln.x)
@@ -123,13 +139,32 @@ class Optimizer:
                 fit_keys.pop(key)
 
         init_x = np.concatenate([np.atleast_1d(x) for x in param_list])
-        init_lb = np.concatenate([np.atleast_1d(x) for x in BOUNDS[0]])
-        init_ub = np.concatenate([np.atleast_1d(x) for x in BOUNDS[1]])
+
+        lower_bounds, upper_bounds = BOUNDS
+        bounds = []
+        for key, low, high in zip(fit_keys, lower_bounds, upper_bounds):
+            low = np.atleast_1d(low)
+            high = np.atleast_1d(high)
+            if key == "knot_values":
+                for l, h in zip(low, high):
+                    bounds.append((np.log(l+1e-14), np.log(h)))
+            else:
+                bounds.append((low[0], high[0]))
+
+        # Flatten the bound arrays for comparison
+        init_lb, init_ub = zip(*bounds)
+        init_lb = np.array(init_lb)
+        init_ub = np.array(init_ub)
+        # Bounds check
         if not (np.all(init_x > init_lb) and np.all(init_x < init_ub)):
-            print("Initial parameters out of bounds:", init_x[(init_x < init_lb) | (init_x > init_ub)])
+            print("Initial parameters out of bounds:")
+            for i, (x, lb, ub) in enumerate(zip(init_x, init_lb, init_ub)):
+                if not (lb < x < ub):
+                    param_name = f"{fit_keys[i]}" if i < len(fit_keys) else f"knot_values[{i - len(fit_keys) + 1}]"
+                    print(f" - {param_name}: value = {x:.5g}, bounds = ({lb:.5g}, {ub:.5g})")
             return None
 
-        mc_model = MCMC_model(ll, BOUNDS)
+        mc_model = MCMC_model(ll, (init_lb, init_ub))
         mc_model.run(init_x, nconst=1e-7, nwalkers=nwalkers, niter=niter, burn_iter=burns)
 
         mc_soln = np.median(mc_model.sampler.flatchain, axis=0)
@@ -160,7 +195,7 @@ class Optimizer:
         self.spf_params['low_bound'] = jnp.cos(jnp.deg2rad(90+self.disk_params['inclination']+buffer))
         return self.spf_params
     
-    def scale_knots(self, target_image, dhg_params = [0.5, 0.5, 0.5]):
+    def scale_initial_knots(self, target_image, dhg_params = [0.5, 0.5, 0.5]):
         ## Get a good scaling
         y, x = np.indices(target_image.shape)
         y -= 70
@@ -185,6 +220,8 @@ class Optimizer:
                 0.0)
             self.spf_params['knot_values'] = self.spf_params['knot_values'] * adjust_scale
             self.misc_params['flux_scaling'] = self.misc_params['flux_scaling'] / adjust_scale
+        else:
+            self.scale_spline_to_fixed_point(0, 1)
 
     def scale_spline_to_fixed_point(self, cosphi, spline_val):
         adjust_scale = spline_val / InterpolatedUnivariateSpline_SPF.compute_phase_function_from_cosphi(
@@ -195,7 +232,7 @@ class Optimizer:
 
     def fix_negative_spline_params_to_zero(self):
         if issubclass(self.FuncModel, InterpolatedUnivariateSpline_SPF):
-            self.spf_params['knot_values'] = np.where(self.spf_params['knot_values'] < 0, 0, self.spf_params['knot_values'])
+            self.spf_params['knot_values'] = np.where(self.spf_params['knot_values'] < 1e-8, 1e-8, self.spf_params['knot_values'])
 
     def fix_negative_eccentricity_to_zero(self):
         if self.disk_params['e']<0:
