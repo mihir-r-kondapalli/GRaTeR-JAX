@@ -27,6 +27,13 @@ def pack_pars(p_dict, orig_dict):
         p_arrs.append(p_dict[name])
     return jnp.asarray(p_arrs)
 
+@jax.jit
+def log_likelihood(image, target_image, err_map):
+    sigma2 = jnp.power(err_map, 2)
+    result = jnp.power((target_image - image), 2) / sigma2 + jnp.log(sigma2)
+    result = jnp.where(jnp.isnan(result), 0, result)
+
+    return -0.5 * jnp.sum(result)  # / jnp.size(target_image)
 
 @partial(jax.jit, static_argnames=['DiskModel', 'DistrModel', 'FuncModel', 'PSFModel', 'nx', 'ny', 'halfNbSlices'])
 def jax_model(DiskModel, DistrModel, FuncModel, PSFModel, disk_params, spf_params, psf_params, distance = 0., pxInArcsec = 0.,
@@ -197,6 +204,7 @@ def jax_model_spline_winnie(DiskModel, DistrModel, FuncModel, winnie_psf, disk_p
 
     return scattered_light_image*flux_scaling
 
+### Objective Functions
 
 def objective_model(disk_params, spf_params, psf_params, misc_params,
                        DiskModel, DistrModel, FuncModel, PSFModel, **kwargs):
@@ -246,7 +254,6 @@ def objective_model(disk_params, spf_params, psf_params, misc_params,
 
     return model_image
 
-
 def objective_ll(disk_params, spf_params, psf_params, misc_params,
                        DiskModel, DistrModel, FuncModel, PSFModel, target_image, err_map, **kwargs):
     """
@@ -262,15 +269,6 @@ def objective_ll(disk_params, spf_params, psf_params, misc_params,
     result = jnp.where(jnp.isnan(result), 0, result)
 
     return -0.5 * jnp.sum(result)  # / jnp.size(target_image)
-
-@jax.jit
-def log_likelihood(image, target_image, err_map):
-    sigma2 = jnp.power(err_map, 2)
-    result = jnp.power((target_image - image), 2) / sigma2 + jnp.log(sigma2)
-    result = jnp.where(jnp.isnan(result), 0, result)
-
-    return -0.5 * jnp.sum(result)  # / jnp.size(target_image)
-
 
 def objective_fit(params_fit, fit_keys, disk_params, spf_params, psf_params, misc_params,
                        DiskModel, DistrModel, FuncModel, PSFModel, target_image, err_map, **kwargs):
@@ -340,7 +338,7 @@ def objective_fit(params_fit, fit_keys, disk_params, spf_params, psf_params, mis
 
     result = residuals(target_image,err_map,model_image)
 
-    return -0.5 * jnp.sum(result)  # / jnp.size(target_image)
+    return -0.5 * jnp.sum(result)  # / jnp.size(target_image)s
 
 def residuals(target_image,err_map,model_image):
     """
