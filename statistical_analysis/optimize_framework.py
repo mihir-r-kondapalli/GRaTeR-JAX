@@ -81,7 +81,8 @@ class Optimizer:
                 print(key + " not in any of the parameter dictionaries!")
             params+=1
 
-        opt = {'disp': disp_opt, 'maxiter': iters}
+        self.fix_negative_spline_params_to_zero()
+
         if disp_soln:
             print(soln)
         return soln
@@ -190,6 +191,10 @@ class Optimizer:
             cosphi)
         self.spf_params['knot_values'] = self.spf_params['knot_values'] * adjust_scale
         self.misc_params['flux_scaling'] = self.misc_params['flux_scaling'] / adjust_scale
+
+    def fix_negative_spline_params_to_zero(self):
+        if issubclass(self.FuncModel, InterpolatedUnivariateSpline_SPF):
+            self.spf_params['knot_values'] = np.where(self.spf_params['knot_values'] < 0, 0, self.spf_params['knot_values'])
 
     def print_params(self):
         print("Disk Params: " + str(self.disk_params))
