@@ -18,22 +18,14 @@ Description of files:
 - psf_offsets_F360M.npy = Offset values for each PSF location relative to the image grid.
 - psfs_F360M.npy = A stack of PSF images at various field locations or roll angles.
 
-When to use these:
-
-### hg3fit
-
-Description of files:
-- hg3fit_F300M_m_stars_bounded_quad_new.npz.npy = Pre-fit HG3 model parameters for F300M, bounded with prior constraints and tailored for specific stars or roll angles.
-- hg3fit_F360M_full_params.npy = Fitted triple-HG parameters across a wider set of F360M observations.
-
-When to use these:
-
 ### GPI
 
 Description of files:
 - GPI_Hband_PSF.fits = an empirically generated PSF for Gemini Planet Imager H band observations
 
-When to use these: When you are processing different static psfs like Gemini Planet Imager, you can define your own fits file in the same
+
+### When to use these:
+When you are processing different static psfs like Gemini Planet Imager, you can define your own fits file in the same
 format as GPI_Hband_PSF.fits to deal with them. However, if you need to handle dynamic psfs like JWST that handles spatially variable PSFs
 and various roll angles, you should use the framework for the Winnie_PSF class.
 
