@@ -1,20 +1,4 @@
 #! /usr/bin/env python
-"""
-Class definition for ScatteredLightDisk, Dust_distribution and Phase_function
-
-.. [AUG99]
-   | Augereau et al. 1999
-   | **On the HR 4796 A circumstellar disk**
-   | *Astronomy & Astrophysics, Volume 348, pp. 557-569*
-   | `https://arxiv.org/abs/astro-ph/9906429
-     <https://arxiv.org/abs/astro-ph/9906429>`_
-
-"""
-
-__author__ = 'Julien Milli'
-__all__ = ['ScatteredLightDisk',
-           'Dust_distribution',
-           'Phase_function']
 
 import jax
 import jax.numpy as jnp
