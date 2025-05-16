@@ -16,7 +16,7 @@ To install GRaTeR-JAX and its dependencies, run:
 ```sh
 git clone https://github.com/UCSB-Exoplanet-Polarimetry-Lab/GRaTeR-JAX.git
 cd GRaTeR-JAX
-pip install -r requirements.txt
+conda env create -f environment.yml
 ```
 
 Make sure you have JAX installed with the correct backend for your hardware:
@@ -27,10 +27,13 @@ pip install --upgrade "jax[cpu]"  # or "jax[cuda]" for GPU
 
 ## Usage
 
-### Refer to ObjectiveFunctionTest.ipynb for building basic disk models and fitting them to images.
+### Refer to tutorials/DiskTutorial.ipynb for building basic disk models and fitting them to images.
+### Refer to tutorials/FitsTutorial.ipynb for analyzing fits files, fitting disks to them, and running MCMC tests.
 
 Information about the disk and misc parameters can be found in objective_functions.py. Information about the
 scattering phase function and point spread function parameters can be found in SLD_utils.py.
+
+Check out [GRaTeR Image Generator](scattered-light-disks.vercel.app) to visualize how each of the parameters affect the disk model!
 
 ## Repository Structure
 
@@ -40,9 +43,9 @@ GRaTeR-JAX/
 │── optimization/          # Tools for statistical optimization and analysis
 |── tutorials/             # Tutorial Jupyter notebooks
 │── webbpsf-data           # PSF data for various instruments
-│── cdbs/                  # Utility files for WebbPSF convolution
-│── PSFs/                  # PSF data
-│── requirements.txt       # Dependencies
+│── PSFs/                  # PSF data for the disk model
+│── environment.yml        # Dependencies
+│── requirements.txt       # Pip dependencies
 │── README.md              # This document
 ```
 
@@ -60,6 +63,6 @@ We welcome contributions! To contribute:
 
 ## Acknowledgments
 
-Developed by the **UCSB Exoplanet Polarimetry Lab**. This work is inspired by previous implementations of GRaTeR and advances in JAX-based differentiable modeling.
+Developed by the **UCSB Exoplanet Polarimetry Lab**. This work is inspired by previous implementations of GRaTeR and advances in JAX-based differentiable modeling. Additional thanks to Kellen Lawson for developing the Winnie package that this framework uses to model JWST PSFs.
 
 ---
