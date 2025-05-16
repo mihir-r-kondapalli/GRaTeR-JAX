@@ -1,9 +1,9 @@
 import jax
 import jax.numpy as jnp
-from utils.SLD_utils import *
+from disk_model.SLD_utils import *
 from scipy.optimize import minimize
-from utils.mcmc_model import MCMC_model
-from utils.objective_functions import objective_model, objective_ll, objective_fit, log_likelihood
+from optimization.mcmc_model import MCMC_model
+from disk_model.objective_functions import objective_model, objective_ll, objective_fit, log_likelihood
 
 # Built for new objective function
 class Optimizer:
@@ -156,7 +156,7 @@ class Optimizer:
         init_lb = np.array(init_lb)
         init_ub = np.array(init_ub)
         # Bounds check
-        if not (np.all(init_x > init_lb) and np.all(init_x < init_ub)):
+        if not (np.all(init_x >= init_lb) and np.all(init_x <= init_ub)):
             print("Initial parameters out of bounds:")
             for i, (x, lb, ub) in enumerate(zip(init_x, init_lb, init_ub)):
                 if not (lb < x < ub):

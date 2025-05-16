@@ -3,10 +3,10 @@ import jax.numpy as jnp
 import numpy as np
 from functools import partial
 import matplotlib.pyplot as plt
-from utils.interpolated_univariate_spline import InterpolatedUnivariateSpline
+from disk_model.interpolated_univariate_spline import InterpolatedUnivariateSpline
 from astropy.io import fits
 import jax.scipy.signal as jss
-from utils.winnie_class import WinniePSF
+from disk_model.winnie_class import WinniePSF
 
 class Jax_class:
 
