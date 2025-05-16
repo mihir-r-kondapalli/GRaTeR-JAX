@@ -36,8 +36,8 @@ scattering phase function and point spread function parameters can be found in S
 
 ```
 GRaTeR-JAX/
-│── utils/                 # Utility functions for modeling and optimization
-│── statistical-analysis/  # Tools for statistical optimization and analysis
+│── disk_model/            # Code for disk modeling
+│── optimization/          # Tools for statistical optimization and analysis
 |── tutorials/             # Tutorial Jupyter notebooks
 │── webbpsf-data           # PSF data for various instruments
 │── cdbs/                  # Utility files for WebbPSF convolution
