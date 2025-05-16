@@ -7,7 +7,8 @@ from disk_model.objective_functions import objective_model, objective_ll, object
 
 # Built for new objective function
 class Optimizer:
-    def __init__(self, disk_params, spf_params, psf_params, misc_params, DiskModel, DistrModel, FuncModel, PSFModel, **kwargs):
+    def __init__(self, disk_params, spf_params, psf_params, misc_params, DiskModel, DistrModel, FuncModel, PSFModel,
+                 StellarPSFModel = None, **kwargs):
         self.disk_params = disk_params
         self.spf_params = spf_params
         self.psf_params = psf_params
@@ -16,13 +17,14 @@ class Optimizer:
         self.DistrModel = DistrModel
         self.FuncModel = FuncModel
         self.PSFModel = PSFModel
+        self.StellarPSFModel = StellarPSFModel
         self.kwargs = kwargs
 
     def model(self):
         return objective_model(
             self.disk_params, self.spf_params, self.psf_params, self.misc_params,
             self.DiskModel, self.DistrModel, self.FuncModel,
-            self.PSFModel, **self.kwargs
+            self.PSFModel, stellar_psf_model=self.StellarPSFModel, **self.kwargs
         )
 
     def log_likelihood_pos(self, target_image, err_map):
@@ -42,13 +44,17 @@ class Optimizer:
                 if key == "knot_values":
                     new_list.append(np.exp(x[index:index+self.spf_params['num_knots']]))
                     index+=self.spf_params['num_knots']
+                elif key == "stellar_weights":
+                    new_list.append(np.exp(x[index:index+self.psf_params['stellar_weights'].size]))
+                    index+=self.psf_params['stellar_weights'].size
                 else:
                     new_list.append(x[index])
                     index += 1
             return new_list
 
         llp = lambda x: -objective_fit(expand(x), fit_keys, self.disk_params, self.spf_params, self.psf_params, self.misc_params,
-                                    self.DiskModel, self.DistrModel, self.FuncModel, self.PSFModel, target_image, err_map)
+                                    self.DiskModel, self.DistrModel, self.FuncModel, self.PSFModel, target_image, err_map,
+                                    stellar_psf_model=self.StellarPSFModel)
         
         param_list = []
         for key in fit_keys:
@@ -60,7 +66,10 @@ class Optimizer:
                 else:
                     param_list.append(self.spf_params[key])
             elif key in self.psf_params:
-                param_list.append(self.psf_params[key])
+                if key == 'stellar_weights':
+                    param_list.append(np.log(self.psf_params[key]))
+                else:
+                    param_list.append(self.psf_params[key])
             elif key in self.misc_params:
                 param_list.append(self.misc_params[key])
             else:
@@ -76,6 +85,9 @@ class Optimizer:
             bounds = []
             for key, low, high in zip(fit_keys, lower_bounds, upper_bounds):
                 if key == "knot_values":
+                    for l, h in zip(low, high):  # each is an array
+                        bounds.append((np.log(l+1e-14), np.log(h)))
+                elif key == "stellar_weights":
                     for l, h in zip(low, high):  # each is an array
                         bounds.append((np.log(l+1e-14), np.log(h)))
                 else:
@@ -113,13 +125,17 @@ class Optimizer:
                 if key == "knot_values":
                     new_list.append(np.exp(x[index:index+self.spf_params['num_knots']]))
                     index+=self.spf_params['num_knots']
+                elif key == "stellar_weights":
+                    new_list.append(np.exp(x[index:index+self.psf_params['stellar_weights'].size]))
+                    index+=self.psf_params['stellar_weights'].size
                 else:
                     new_list.append(x[index])
                     index += 1
             return new_list
 
         ll = lambda x: -objective_fit(expand(x), fit_keys, self.disk_params, self.spf_params, self.psf_params, self.misc_params,
-                                    self.DiskModel, self.DistrModel, self.FuncModel, self.PSFModel, target_image, err_map)
+                                    self.DiskModel, self.DistrModel, self.FuncModel, self.PSFModel, target_image, err_map,
+                                    stellar_psf_model=self.StellarPSFModel)
         
         param_list = []
         for key in fit_keys:
@@ -131,7 +147,10 @@ class Optimizer:
                 else:
                     param_list.append(self.spf_params[key])
             elif key in self.psf_params:
-                param_list.append(self.psf_params[key])
+                if key == "stellar_weights":
+                    param_list.append(np.log(self.psf_params[key]))
+                else:
+                    param_list.append(self.psf_params[key])
             elif key in self.misc_params:
                 param_list.append(self.misc_params[key])
             else:
@@ -146,6 +165,9 @@ class Optimizer:
             low = np.atleast_1d(low)
             high = np.atleast_1d(high)
             if key == "knot_values":
+                for l, h in zip(low, high):
+                    bounds.append((np.log(l+1e-14), np.log(h)))
+            elif key == "stellar_weights":
                 for l, h in zip(low, high):
                     bounds.append((np.log(l+1e-14), np.log(h)))
             else:
