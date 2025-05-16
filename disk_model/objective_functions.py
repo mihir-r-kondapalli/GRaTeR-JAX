@@ -2,7 +2,7 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 from functools import partial
-from utils.SLD_utils import InterpolatedUnivariateSpline_SPF, Winnie_PSF
+from disk_model.SLD_utils import InterpolatedUnivariateSpline_SPF, Winnie_PSF
 import matplotlib.pyplot as plt
 
 class Parameter_Index:
