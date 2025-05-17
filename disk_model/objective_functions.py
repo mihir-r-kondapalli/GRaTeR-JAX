@@ -207,8 +207,7 @@ def jax_model_spline_winnie(DiskModel, DistrModel, FuncModel, winnie_psf, disk_p
 ### Objective Functions
 
 def objective_model(disk_params, spf_params, psf_params, misc_params,
-                       DiskModel, DistrModel, FuncModel, PSFModel,
-                       stellar_psf_model = None, **kwargs):
+                       DiskModel, DistrModel, FuncModel, PSFModel, **kwargs):
 
     """
     Objective function for optimization that updates only the selected parameters.
@@ -252,23 +251,17 @@ def objective_model(disk_params, spf_params, psf_params, misc_params,
             nx = misc_params['nx'], ny = misc_params['ny'], halfNbSlices=misc_params['halfNbSlices'],
             flux_scaling=misc_params['flux_scaling'], knots=FuncModel.get_knots(spf_params)
         )
-    
-    if stellar_psf_model == None:
-        model_image = stellar_psf_model.generate(model_image, psf_params['stellar_weights'])
 
     return model_image
 
 def objective_ll(disk_params, spf_params, psf_params, misc_params,
-                       DiskModel, DistrModel, FuncModel, PSFModel,
-                       target_image, err_map, stellar_psf_model = None,
-                       **kwargs):
+                       DiskModel, DistrModel, FuncModel, PSFModel, target_image, err_map, **kwargs):
     """
     Objective function for optimization that updates only the selected parameters.
     """
 
     model_image = objective_model(
-        disk_params, spf_params, psf_params, misc_params, DiskModel, DistrModel, FuncModel, PSFModel,
-        stellar_psf_model=stellar_psf_model
+        disk_params, spf_params, psf_params, misc_params, DiskModel, DistrModel, FuncModel, PSFModel
     )
 
     sigma2 = jnp.power(err_map, 2)
@@ -278,8 +271,7 @@ def objective_ll(disk_params, spf_params, psf_params, misc_params,
     return -0.5 * jnp.sum(result)  # / jnp.size(target_image)
 
 def objective_fit(params_fit, fit_keys, disk_params, spf_params, psf_params, misc_params,
-                       DiskModel, DistrModel, FuncModel, PSFModel, target_image, err_map,
-                       stellar_psf_model = None, **kwargs):
+                       DiskModel, DistrModel, FuncModel, PSFModel, target_image, err_map, **kwargs):
     """
     Objective function for optimization that updates only the selected parameters.
     """
@@ -343,9 +335,6 @@ def objective_fit(params_fit, fit_keys, disk_params, spf_params, psf_params, mis
             nx = misc_params['nx'], ny = misc_params['ny'], halfNbSlices=misc_params['halfNbSlices'],
             flux_scaling=misc_params['flux_scaling'], knots=FuncModel.get_knots(temp_spf_params)
         )
-
-    if stellar_psf_model == None:
-        model_image = stellar_psf_model.generate(model_image, psf_params['stellar_weights'])
 
     result = residuals(target_image,err_map,model_image)
 
