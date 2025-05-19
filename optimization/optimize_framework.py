@@ -31,74 +31,59 @@ class Optimizer:
     def log_likelihood(self, target_image, err_map):
         return log_likelihood(self.model(), target_image, err_map)
 
-    def scipy_optimize(self, fit_keys, target_image, err_map, fit_bounds = None,
-                       disp_opt=False, disp_soln=False, iters=500, grad=False,
-                       method=None, **kwargs):
+    def scipy_optimize(self, fit_keys, logscaled_params, array_params, target_image, err_map,
+                       disp_soln=False, iters=500, method=None, **kwargs): 
+        
+        logscales = self._highlight_selected_params(fit_keys, logscaled_params)
+        is_arrays = self._highlight_selected_params(fit_keys, array_params)
 
-        def expand(x):
-            new_list = []
-            index = 0
-            for key in fit_keys:
-                if key == "knot_values":
-                    new_list.append(np.exp(x[index:index+self.spf_params['num_knots']]))
-                    index+=self.spf_params['num_knots']
-                else:
-                    new_list.append(x[index])
-                    index += 1
-            return new_list
-
-        llp = lambda x: -objective_fit(expand(x), fit_keys, self.disk_params, self.spf_params, self.psf_params, self.misc_params,
+        llp = lambda x: -objective_fit(self._unflatten_params(x, fit_keys, logscales, is_arrays), fit_keys, self.disk_params, self.spf_params, self.psf_params, self.misc_params,
                                     self.DiskModel, self.DistrModel, self.FuncModel, self.PSFModel, target_image, err_map)
         
-        param_list = []
-        for key in fit_keys:
-            if key in self.disk_params:
-                param_list.append(self.disk_params[key])
-            elif key in self.spf_params:
-                if key == 'knot_values':
-                    param_list.append(np.log(self.spf_params[key]))
-                else:
-                    param_list.append(self.spf_params[key])
-            elif key in self.psf_params:
-                param_list.append(self.psf_params[key])
-            elif key in self.misc_params:
-                param_list.append(self.misc_params[key])
-            else:
-                print(key + " not in any of the parameter dictionaries!")
-                fit_keys.pop(key)
+        init_x = self._flatten_params(fit_keys, logscales, is_arrays)
 
-        init_x = np.concatenate([np.atleast_1d(x) for x in param_list])
+        soln = minimize(llp, init_x, method=method, options={'disp': True, 'max_itr': iters})
 
-        if(fit_bounds == None):
-            soln = minimize(llp, init_x, method=method, options={'disp': True, 'max_itr': iters})
-        else:
-            lower_bounds, upper_bounds = fit_bounds
-            bounds = []
-            for key, low, high in zip(fit_keys, lower_bounds, upper_bounds):
-                if key == "knot_values":
-                    for l, h in zip(low, high):  # each is an array
+        param_list = self._unflatten_params(soln.x, fit_keys, logscales, is_arrays)
+        self._update_params(param_list, fit_keys)
+
+        if disp_soln:
+            print(soln)
+        return soln
+    
+    def scipy_bounded_optimize(self, fit_keys, fit_bounds, logscaled_params, array_params, target_image, err_map,
+                       disp_soln=False, iters=500, **kwargs):
+        
+        logscales = self._highlight_selected_params(fit_keys, logscaled_params)
+        is_arrays = self._highlight_selected_params(fit_keys, array_params)
+        
+        llp = lambda x: -objective_fit(self._unflatten_params(x, fit_keys, logscales, is_arrays), fit_keys, self.disk_params, self.spf_params, self.psf_params, self.misc_params,
+                                    self.DiskModel, self.DistrModel, self.FuncModel, self.PSFModel, target_image, err_map)
+        
+        init_x = self._flatten_params(fit_keys, logscales, is_arrays)
+
+        lower_bounds, upper_bounds = fit_bounds
+        bounds = []
+        i = 0
+        for key, low, high in zip(fit_keys, lower_bounds, upper_bounds):
+            low = np.atleast_1d(low)
+            high = np.atleast_1d(high)
+            if is_arrays[i]:
+                for l, h in zip(low, high):
+                    if logscales[i]:
                         bounds.append((np.log(l+1e-14), np.log(h)))
-                else:
-                    bounds.append((low, high))
-            soln = minimize(llp, init_x, method='L-BFGS-B', bounds=bounds, options={'disp': True, 'max_itr': iters})
-
-        params = 0
-        param_list = expand(soln.x)
-        for key in fit_keys:
-            if key in self.disk_params:
-                self.disk_params[key] = param_list[params]
-            elif key in self.spf_params:
-                self.spf_params[key] = param_list[params]
-            elif key in self.psf_params:
-                self.psf_params[key] = param_list[params]
-            elif key in self.misc_params:
-                self.misc_params[key] = param_list[params]
+                    else:
+                        bounds.append((low[0], high[0]))
             else:
-                print(key + " not in any of the parameter dictionaries!")
-            params+=1
+                if logscales[i]:
+                    bounds.append((np.log(low+1e-14), np.log(high)))
+                else:
+                    bounds.append((low[0], high[0]))
+            i+=1
+        soln = minimize(llp, init_x, method='L-BFGS-B', bounds=bounds, options={'disp': True, 'max_itr': iters})
 
-        self.fix_negative_spline_params_to_zero()
-        self.fix_negative_eccentricity_to_zero()
+        param_list = self._unflatten_params(soln.x, fit_keys, logscales, is_arrays)
+        self._update_params(param_list, fit_keys)
 
         if disp_soln:
             print(soln)
@@ -230,11 +215,9 @@ class Optimizer:
         self.spf_params['knot_values'] = self.spf_params['knot_values'] * adjust_scale
         self.misc_params['flux_scaling'] = self.misc_params['flux_scaling'] / adjust_scale
 
-    def fix_negative_spline_params_to_zero(self):
+    def fix_all_nonphysical_params(self):
         if issubclass(self.FuncModel, InterpolatedUnivariateSpline_SPF):
             self.spf_params['knot_values'] = np.where(self.spf_params['knot_values'] < 1e-8, 1e-8, self.spf_params['knot_values'])
-
-    def fix_negative_eccentricity_to_zero(self):
         if self.disk_params['e']<0:
             self.disk_params['e'] = 0
 
@@ -243,6 +226,156 @@ class Optimizer:
         print("SPF Params: " + str(self.spf_params))
         print("PSF Params: " + str(self.psf_params))
         print("Misc Params: " + str(self.misc_params))
+
+    def _flatten_params(self, fit_keys, logscales, is_arrays):
+        """
+        Flatten parameters into a 1D array for optimization.
+        
+        Parameters:
+        -----------
+        fit_keys : list
+            List of parameter keys to be included in the flattened array.
+        logscales : list
+            List of boolean values indicating whether each parameter should be log-scaled.
+            Must be the same length as fit_keys.
+        is_arrays : list
+            List of boolean values indicating whether each parameter is an array.
+            Must be the same length as fit_keys.
+            
+        Returns:
+        --------
+        numpy.ndarray
+            Flattened parameter array.
+        """
+            
+        # Ensure lists are the same length as fit_keys
+        if len(logscales) != len(fit_keys) or len(is_arrays) != len(fit_keys):
+            raise ValueError("scales and is_arrays must have the same length as fit_keys")
+        
+        param_list = []
+        for i, key in enumerate(fit_keys):
+            # Get parameter from appropriate dictionary
+            if key in self.disk_params:
+                value = self.disk_params[key]
+            elif key in self.spf_params:
+                value = self.spf_params[key]
+            elif key in self.psf_params:
+                value = self.psf_params[key]
+            elif key in self.misc_params:
+                value = self.misc_params[key]
+            else:
+                raise ValueError(f"{key} not in any of the parameter dictionaries!")
+                
+            # Apply log scaling if needed
+            if logscales[i]:
+                if is_arrays[i]:
+                    # Handle array parameters with log scaling
+                    value = np.log(np.maximum(value, 1e-14))  # Ensure positive values for log
+                else:
+                    # Handle scalar parameters with log scaling
+                    value = np.log(max(value, 1e-14))
+                    
+            param_list.append(value)
+                
+        return np.concatenate([np.atleast_1d(x) for x in param_list])
+
+    def _unflatten_params(self, flattened_params, fit_keys, logscales, is_arrays):
+        """
+        Convert flattened parameter array back to appropriate parameter values.
+        
+        Parameters:
+        -----------
+        flattened_params : numpy.ndarray
+            Flattened parameter array.
+        fit_keys : list
+            List of parameter keys corresponding to the flattened parameters.
+        logscales : list
+            List of boolean values indicating whether each parameter should be log-scaled.
+            Must be the same length as fit_keys.
+        is_arrays : list
+            List of boolean values indicating whether each parameter is an array.
+            Must be the same length as fit_keys.
+            
+        Returns:
+        --------
+        list
+            List of unflattened parameter values.
+        """
+            
+        # Ensure lists are the same length as fit_keys
+        if len(logscales) != len(fit_keys) or len(is_arrays) != len(fit_keys):
+            raise ValueError("scales and is_arrays must have the same length as fit_keys")
+        
+        param_list = []
+        index = 0
+        
+        for i, key in enumerate(fit_keys):
+            if is_arrays[i]:
+                # For arrays, determine the size
+                for param_dict in [self.disk_params, self.spf_params, self.psf_params, self.misc_params]:
+                    if key in param_dict and hasattr(param_dict[key], "__len__"):
+                        array_size = len(param_dict[key])
+                        break
+                else:
+                    raise ValueError(f"Cannot determine array size for {key}")
+                
+                # Extract array values
+                array_values = flattened_params[index:index+array_size]
+                index += array_size
+                
+                # Apply inverse scaling if needed
+                if logscales[i]:
+                    array_values = np.exp(array_values)
+                    
+                param_list.append(array_values)
+            else:
+                # Handle scalar parameters
+                value = flattened_params[index]
+                index += 1
+                
+                # Apply inverse scaling if needed
+                if logscales[i]:
+                    value = np.exp(value)
+                    
+                param_list.append(value)
+                
+        return param_list
+
+    def _update_params(self, param_values, fit_keys):
+        """
+        Update class parameter dictionaries with new values.
+        
+        Parameters:
+        -----------
+        param_values : list
+            List of parameter values.
+        fit_keys : list
+            List of parameter keys corresponding to the parameter values.
+        """
+        if len(param_values) != len(fit_keys):
+            raise ValueError("param_values must have the same length as fit_keys")
+            
+        for i, key in enumerate(fit_keys):
+            value = param_values[i]
+            
+            if key in self.disk_params:
+                self.disk_params[key] = value
+            elif key in self.spf_params:
+                self.spf_params[key] = value
+            elif key in self.psf_params:
+                self.psf_params[key] = value
+            elif key in self.misc_params:
+                self.misc_params[key] = value
+            else:
+                raise ValueError(f"{key} not in any of the parameter dictionaries!")
+        
+        self.fix_all_nonphysical_params()
+
+    def _highlight_selected_params(self, fit_keys, selected_params):
+        select_bools = []
+        for key in fit_keys:
+            select_bools.append(key in selected_params)
+        return select_bools
 
 class OptimizeUtils:
     
