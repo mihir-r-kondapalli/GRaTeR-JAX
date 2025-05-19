@@ -139,6 +139,7 @@ dependencies:
       - fonttools==4.55.4
       - html5lib==1.1
       - idna==3.10
+      - imageio==2.37.0
       - jaraco-classes==3.4.0
       - jaraco-context==6.0.1
       - jaraco-functools==4.1.0
@@ -150,8 +151,10 @@ dependencies:
       - jeepney==0.8.0
       - joblib==1.4.2
       - keyring==25.6.0
+      - lazy-loader==0.4
       - lxml==5.3.0
       - more-itertools==10.6.0
+      - networkx==3.4.2
       - numexpr==2.10.2
       - nvidia-cublas-cu12==12.6.4.1
       - nvidia-cuda-cupti-cu12==12.6.80
@@ -171,12 +174,14 @@ dependencies:
       - pysiaf==0.24.1
       - pyvo==1.6
       - requests==2.32.3
+      - scikit-image==0.25.2
       - secretstorage==3.3.3
       - soupsieve==2.6
+      - stpsf==2.0.0
       - stsynphot==1.4.0
       - synphot==1.5.0
+      - tifffile==2025.5.10
       - tqdm==4.67.1
       - urllib3==2.3.0
-      - webbpsf==1.5.0
-      - webbpsf-ext==1.2.3
+      - webbpsf-ext==2.0.1
       - webencodings==0.5.1

@@ -30,13 +30,15 @@ def init_fit(name,spf_type='spline',plot=True,save=False,mc=False,num_knots=6):
         target_image = OptimizeUtils.process_image(hdul['SCI'].data[1,:,:])
         err_map = OptimizeUtils.process_image(OptimizeUtils.create_empirical_err_map(hdul['SCI'].data[2,:,:])) #, outlier_pixels=[(57, 68)]))
         misc_params = Parameter_Index.misc_params
+        misc_params['nx'] = 140
+        misc_params['nx'] = 140
 
     if spf_type=='spline':
         spf_params = InterpolatedUnivariateSpline_SPF.params
         psf_params = EMP_PSF.params
         disk_params = Parameter_Index.disk_params
 
-        image_data = pd.read_csv('statistical_analysis/image_info_filt.csv')
+        image_data = pd.read_csv('image_info_filt.csv')
         image_data.set_index("Name", inplace=True)
         image_data.columns = ["Radius", "Inclination", "Position Angle", "Distance", "a_in", "a_out", "eccentricity", "ksi0", "gamma", "beta", "omega", "x_center", "y_center", "knots"]
         row = image_data.loc[name]
@@ -61,7 +63,7 @@ def init_fit(name,spf_type='spline',plot=True,save=False,mc=False,num_knots=6):
                 ScatteredLightDisk, DustEllipticalDistribution2PowerLaws, InterpolatedUnivariateSpline_SPF, EMP_PSF)
         fit_keys = ['alpha_in', 'alpha_out', 'sma', 'e', 'ksi0','gamma','beta','omega','inclination', 'position_angle', 'x_center', 'y_center', 'flux_scaling','knot_values']
         opt.inc_bound_knots()
-        opt.scale_knots(target_image)
+        opt.scale_initial_knots(target_image)
         soln = opt.scipy_optimize(fit_keys, target_image, err_map, disp_soln=True,iters = 1000)
         opt.scale_spline_to_fixed_point(0, 1)
         spf_soln = opt.spf_params
@@ -110,7 +112,7 @@ def init_fit(name,spf_type='spline',plot=True,save=False,mc=False,num_knots=6):
         cb.ax.tick_params(labelsize=12)
         plt.savefig('../GPI_results/{}_initial_fit_{}knots.png'.format(name,num_knots))
 
-    opt.print_params()
+    #opt.print_params()
     if mc==False:
         return optimal_image, soln.x, optimal_ll, spf_soln
 
