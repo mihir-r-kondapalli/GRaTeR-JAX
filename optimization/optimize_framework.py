@@ -89,52 +89,35 @@ class Optimizer:
             print(soln)
         return soln
 
-    def mcmc(self, fit_keys, target_image, err_map, BOUNDS, nwalkers=250, niter=250, burns=50):
+    def mcmc(self, fit_keys, logscaled_params, array_params, target_image, err_map, BOUNDS, nwalkers=250, niter=250, burns=50):
 
-        def expand(x):
-            new_list = []
-            index = 0
-            for key in fit_keys:
-                if key == "knot_values":
-                    new_list.append(np.exp(x[index:index+self.spf_params['num_knots']]))
-                    index+=self.spf_params['num_knots']
-                else:
-                    new_list.append(x[index])
-                    index += 1
-            return new_list
-
-        ll = lambda x: -objective_fit(expand(x), fit_keys, self.disk_params, self.spf_params, self.psf_params, self.misc_params,
+        logscales = self._highlight_selected_params(fit_keys, logscaled_params)
+        is_arrays = self._highlight_selected_params(fit_keys, array_params)
+        
+        ll = lambda x: objective_fit(self._unflatten_params(x, fit_keys, logscales, is_arrays), fit_keys, self.disk_params, self.spf_params, self.psf_params, self.misc_params,
                                     self.DiskModel, self.DistrModel, self.FuncModel, self.PSFModel, target_image, err_map)
         
-        param_list = []
-        for key in fit_keys:
-            if key in self.disk_params:
-                param_list.append(self.disk_params[key])
-            elif key in self.spf_params:
-                if key == "knot_values":
-                    param_list.append(np.log(self.spf_params[key]))
-                else:
-                    param_list.append(self.spf_params[key])
-            elif key in self.psf_params:
-                param_list.append(self.psf_params[key])
-            elif key in self.misc_params:
-                param_list.append(self.misc_params[key])
-            else:
-                print(key + " not in any of the parameter dictionaries!")
-                fit_keys.pop(key)
-
-        init_x = np.concatenate([np.atleast_1d(x) for x in param_list])
+        init_x = self._flatten_params(fit_keys, logscales, is_arrays)
 
         lower_bounds, upper_bounds = BOUNDS
+        i = 0
         bounds = []
         for key, low, high in zip(fit_keys, lower_bounds, upper_bounds):
             low = np.atleast_1d(low)
             high = np.atleast_1d(high)
-            if key == "knot_values":
-                for l, h in zip(low, high):
-                    bounds.append((np.log(l+1e-14), np.log(h)))
+            if is_arrays[i]:
+                if logscales[i]:
+                    for l, h in zip(low, high):
+                        bounds.append((np.log(np.maximum(l, 1e-14)), np.log(h)))
+                else:
+                    for l, h in zip(low, high):
+                        bounds.append((l, h))
             else:
-                bounds.append((low[0], high[0]))
+                if logscales[i]:
+                    bounds.append((np.log(np.maximum(low[0], 1e-14)), np.log(high[0])))
+                else:
+                    bounds.append((low[0], high[0]))
+            i+=1
 
         # Flatten the bound arrays for comparison
         init_lb, init_ub = zip(*bounds)
@@ -143,30 +126,14 @@ class Optimizer:
         # Bounds check
         if not (np.all(init_x >= init_lb) and np.all(init_x <= init_ub)):
             print("Initial parameters out of bounds:")
-            for i, (x, lb, ub) in enumerate(zip(init_x, init_lb, init_ub)):
-                if not (lb < x < ub):
-                    param_name = f"{fit_keys[i]}" if i < len(fit_keys) else f"knot_values[{i - len(fit_keys) + 1}]"
-                    print(f" - {param_name}: value = {x:.5g}, bounds = ({lb:.5g}, {ub:.5g})")
             return None
 
         mc_model = MCMC_model(ll, (init_lb, init_ub))
         mc_model.run(init_x, nconst=1e-7, nwalkers=nwalkers, niter=niter, burn_iter=burns)
 
         mc_soln = np.median(mc_model.sampler.flatchain, axis=0)
-        params = 0
-        param_list = expand(mc_soln)
-        for key in fit_keys:
-            if key in self.disk_params:
-                self.disk_params[key] = param_list[params]
-            elif key in self.spf_params:
-                self.spf_params[key] = param_list[params]
-            elif key in self.psf_params:
-                self.psf_params[key] = param_list[params]
-            elif key in self.misc_params:
-                self.misc_params[key] = param_list[params]
-            else:
-                print(key + " not in any of the parameter dictionaries!")
-            params+=1
+        param_list = self._unflatten_params(mc_soln, fit_keys, logscales, is_arrays)
+        self._update_params(param_list, fit_keys)
 
         return mc_model
     
