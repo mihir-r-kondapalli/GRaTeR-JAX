@@ -123,10 +123,18 @@ class Optimizer:
         init_lb, init_ub = zip(*bounds)
         init_lb = np.array(init_lb)
         init_ub = np.array(init_ub)
-        # Bounds check
+
         if not (np.all(init_x >= init_lb) and np.all(init_x <= init_ub)):
-            print("Initial parameters out of bounds:")
-            return None
+            init_param_list = self._unflatten_params(init_x, fit_keys, logscales, is_arrays)
+            init_lb_list = self._unflatten_params(init_lb, fit_keys, logscales, is_arrays)
+            init_ub_list = self._unflatten_params(init_ub, fit_keys, logscales, is_arrays)
+            print("Initial mcmc parameters are out of bounds!")
+            output_string = ""
+            for i in range(0, len(init_param_list)):
+                if(np.all(init_param_list[i] < init_lb_list[i]) or np.all(init_param_list[i] > init_ub_list[i])):
+                    output_string += (f"{fit_keys[i]}: {init_param_list[i]}, ")
+            print(output_string[0:-2])
+            raise Exception("MCMC Initial Bounds Exception")
 
         mc_model = MCMC_model(ll, (init_lb, init_ub))
         mc_model.run(init_x, nconst=1e-7, nwalkers=nwalkers, niter=niter, burn_iter=burns)
