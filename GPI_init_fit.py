@@ -8,7 +8,7 @@ import jax.numpy as jnp
 import matplotlib.pyplot as plt
 import numpy as np
 import os
-os.environ['XLA_PYTHON_CLIENT_MEM_FRACTION'] = '0.3'
+os.environ['XLA_PYTHON_CLIENT_MEM_FRACTION'] = '0.15'
 jax.config.update("jax_enable_x64", True)
 import pandas as pd
 from optimization.optimize_framework import Optimizer, OptimizeUtils
