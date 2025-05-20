@@ -11,8 +11,8 @@ disk_model/__pycache__/interpolated_univariate_spline.cpython-312.pyc
 disk_model/__pycache__/disk_utils_jax.cpython-312.pyc
 disk_model/__pycache__/__init__.cpython-312.pyc
 notebooks/*
-optimization/__pycache__/optimize_framework.cpython-312.pyc
-__pycache__/GPI_init_fit.cpython-312.pyc
+optimization/__pycache__/*
+__pycache__/*
 GPI_init_fit.ipynb
 GPI_init_fit.py
 hr4796a_H_pol_initial_fit.png
