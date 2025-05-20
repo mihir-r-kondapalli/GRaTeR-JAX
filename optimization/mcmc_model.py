@@ -62,16 +62,21 @@ class MCMC_model():
                                 plot_datapoints=plot_datapoints,quantiles=quantiles, quiet=quiet)
 
     def plot_chains(self, labels, cols_per_row = 3):
-        # Plotting Chains
-        n_cols = int((self.ndim + 2) / cols_per_row)
-        fig, axes = plt.subplots(n_cols,3, figsize=(20,20))
-        fig.subplots_adjust(hspace=0.5)
-        for i in range(0, n_cols):
-            for j in range(0, cols_per_row):
-                if(cols_per_row*i+j < self.ndim):
-                    axes[i][j].plot(np.linspace(0, self.nwalkers, self.niter), self.sampler.get_chain()[:, :, cols_per_row*i+j].T)
-                    #axes[i][j].set_ylim(BOUNDS[0][cols_per_row*i+j], BOUNDS[1][cols_per_row*i+j])    sets plot y-limits to that of the actual parameter
-                    axes[i][j].set_title(labels[cols_per_row*i+j])
+        if self.sampler is None:
+            raise Exception("Need to run model first!")
+        
+        chain = self.sampler.get_chain()  # shape: (niter, nwalkers, ndim)
+        n_params = chain.shape[2]
+        n_rows = int(np.ceil(n_params / cols_per_row))
+        fig, axes = plt.subplots(n_rows, cols_per_row, figsize=(6 * cols_per_row, 4 * n_rows), squeeze=False)
+        fig.subplots_adjust(hspace=0.4)
+
+        x = np.arange(self.niter)
+        for idx in range(n_params):
+            i, j = divmod(idx, cols_per_row)
+            for walker in range(self.nwalkers):
+                axes[i][j].plot(x, chain[:, walker, idx], alpha=0.5)
+            axes[i][j].set_title(labels[idx])
         plt.show()
 
 
