@@ -8,6 +8,10 @@ from astropy.io import fits
 import jax.scipy.signal as jss
 import os
 
+os.environ["WEBBPSF_PATH"] = '../webbpsf-data'
+os.environ["WEBBPSF_EXT_PATH"] = '../webbpsf-data'
+os.environ["PYSYN_CDBS"] = "../cdbs"
+
 class Jax_class:
 
     params = {}
