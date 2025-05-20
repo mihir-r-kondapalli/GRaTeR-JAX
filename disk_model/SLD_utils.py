@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 from disk_model.interpolated_univariate_spline import InterpolatedUnivariateSpline
 from astropy.io import fits
 import jax.scipy.signal as jss
-from disk_model.winnie_class import WinniePSF
+import os
 
 class Jax_class:
 
@@ -465,7 +465,7 @@ class EMP_PSF(Jax_class):
         fin_image = np.vectorize(safe_float32_conversion)(fin_image)
         return fin_image
 
-    img = process_image(fits.open("../PSFs/GPI_Hband_PSF.fits")[0].data[0,:,:])
+    img = process_image(fits.open(os.getcwd()+"/PSFs/GPI_Hband_PSF.fits")[0].data[0,:,:])
     
     #define model function and pass independant variables x and y as a list
     @classmethod
@@ -477,6 +477,7 @@ class Winnie_PSF(Jax_class):
     """
     Creates a JWST PSF model, using the package Winnie. See Winnie for further JWST PSF documentation.
     """
+    from disk_model.winnie_class import WinniePSF
     @classmethod
     @partial(jax.jit, static_argnames=['cls', 'num_unique_psfs'])
     def init(cls, psfs, psf_inds_rolls, im_mask_rolls, psf_offsets, psf_parangs, num_unique_psfs):
