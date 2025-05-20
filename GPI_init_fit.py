@@ -11,10 +11,10 @@ import os
 os.environ['XLA_PYTHON_CLIENT_MEM_FRACTION'] = '0.3'
 jax.config.update("jax_enable_x64", True)
 import pandas as pd
-from statistical_analysis.optimize_framework import Optimizer, OptimizeUtils
-from utils.objective_functions import objective_model, objective_ll, objective_fit, Parameter_Index
-from utils.SLD_ojax import ScatteredLightDisk
-from utils.SLD_utils import *
+from optimization.optimize_framework import Optimizer, OptimizeUtils
+from disk_model.objective_functions import objective_model, objective_ll, objective_fit, Parameter_Index
+from disk_model.SLD_ojax import ScatteredLightDisk
+from disk_model.SLD_utils import *
 
     
 def init_fit(name,spf_type='spline',plot=True,save=False,mc=False,num_knots=6):
@@ -110,6 +110,7 @@ def init_fit(name,spf_type='spline',plot=True,save=False,mc=False,num_knots=6):
         cb = plt.colorbar(im, ax=axes, shrink=0.5,pad=0.01)
         cb.set_label('Arbitrary Flux Units',fontsize=14)#,rotation=270)
         cb.ax.tick_params(labelsize=12)
+        print('I AM PLOTTING')
         plt.savefig('../GPI_results/{}_initial_fit_{}knots.png'.format(name,num_knots))
 
     #opt.print_params()
