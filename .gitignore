@@ -1,8 +1,9 @@
-disk_model/__pycache__/*
+disk_model/__pycache__
 notebooks/*
-optimization/__pycache__/*
-__pycache__/*
+optimization/__pycache__
+__pycache__
 GPI_init_fit.ipynb
 GPI_init_fit.py
 hr4796a_H_pol_initial_fit.png
 cdbs/
+*.pyc
