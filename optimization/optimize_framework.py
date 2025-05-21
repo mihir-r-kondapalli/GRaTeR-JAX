@@ -17,6 +17,7 @@ class Optimizer:
         self.FuncModel = FuncModel
         self.PSFModel = PSFModel
         self.kwargs = kwargs
+        self.name = 'test'
 
     def model(self):
         return objective_model(
@@ -89,8 +90,7 @@ class Optimizer:
             print(soln)
         return soln
 
-    def mcmc(self, fit_keys, logscaled_params, array_params, target_image, err_map, BOUNDS, nwalkers=250, niter=250, burns=50):
-
+    def mcmc(self, fit_keys, logscaled_params, array_params, target_image, err_map, BOUNDS, nwalkers=250, niter=250, burns=50,continue_from=False):
         logscales = self._highlight_selected_params(fit_keys, logscaled_params)
         is_arrays = self._highlight_selected_params(fit_keys, array_params)
         
@@ -136,8 +136,8 @@ class Optimizer:
             print(output_string[0:-2])
             raise Exception("MCMC Initial Bounds Exception")
 
-        mc_model = MCMC_model(ll, (init_lb, init_ub))
-        mc_model.run(init_x, nconst=1e-7, nwalkers=nwalkers, niter=niter, burn_iter=burns)
+        mc_model = MCMC_model(ll, (init_lb, init_ub), self.name)
+        mc_model.run(init_x, nconst=1e-7, nwalkers=nwalkers, niter=niter, burn_iter=burns,continue_from=continue_from)
 
         mc_soln = np.median(mc_model.sampler.flatchain, axis=0)
         param_list = self._unflatten_params(mc_soln, fit_keys, logscales, is_arrays)

@@ -298,7 +298,7 @@ class InterpolatedUnivariateSpline_SPF(Jax_class):
     def pack_pars(cls, p_arr, knots = jnp.linspace(1, -1, 6)):
         """
         This function takes a array of (knots) values and converts them into an InterpolatedUnivariateSpline model.
-        Also has inclination bounds which help narrow the spline fit
+        Also has inclination bounds which help narrow the spline fit --- does it?? where does this happen? should jnp.linspace in the kwargs be replace with up bound, low bound?
         """    
         return InterpolatedUnivariateSpline(knots, p_arr)
     
