@@ -383,14 +383,24 @@ class Optimizer:
     def save_machine_readable(self,dirname):
         with open(os.path.join(dirname,'{}_{}_diskparams.json'.format(self.name,self.last_fit)), 'w') as save_file:
             json.dump(self.disk_params, save_file)
-        print("NOTE: SPF SAVING NOT YET IMPLEMENTED")
-        #with open(os.path.join(dirname,'{}_{}_spfparams.json'.format(self.name,self.last_fit)), 'w') as save_file:
-            #json.dump(self.spf_params, save_file)
+        with open(os.path.join(dirname,'{}_{}_spfparams.json'.format(self.name,self.last_fit)), 'w') as save_file:
+            serializable_spf = {}
+            for key, value in self.spf_params.items():
+                if isinstance(value, jnp.ndarray):
+                    serializable_spf[key] = value.tolist()
+                else:
+                    serializable_spf[key] = value
+            json.dump(serializable_spf, save_file)
         with open(os.path.join(dirname,'{}_{}_psfparams.json'.format(self.name,self.last_fit)), 'w') as save_file:
             json.dump(self.psf_params, save_file)
-        print("NOTE: MISC PARM SAVING NOT YET IMPLEMENTED")
-        #with open(os.path.join(dirname,'{}_{}_miscparams.json'.format(self.name,self.last_fit)), 'w') as save_file:
-            #json.dump(self.misc_params, save_file)
+        with open(os.path.join(dirname,'{}_{}_miscparams.json'.format(self.name,self.last_fit)), 'w') as save_file:
+            serializable_misc = {}
+            for key, value in self.misc_params.items():
+                if isinstance(value, jnp.ndarray):
+                    serializable_misc[key] = value.tolist()
+                else:
+                    serializable_misc[key] = value
+            json.dump(serializable_misc, save_file)
         print("Saved machine readable files to json in "+dirname)
     
     def load_machine_readable(self,dirname,method=None):
@@ -403,14 +413,22 @@ class Optimizer:
             try:
                 with open(os.path.join(dirname,'{}_{}_diskparams.json'.format(self.name,self.last_fit)), 'r') as read_file:
                     self.disk_params = json.load(read_file)
-                print("NOTE: SPF SAVING NOT YET IMPLEMENTED")
-                #with open(os.path.join(dirname,'{}_{}_spfparams.json'.format(self.name,self.last_fit)), 'r') as read_file:
-                    #self.spf_params = json.load(read_file)
+                with open(os.path.join(dirname,'{}_{}_spfparams.json'.format(self.name,self.last_fit)), 'r') as read_file:
+                    serializable_spf = json.load(read_file)
+                    for key, value in serializable_spf.items():
+                        if isinstance(value, list):
+                            self.spf_params[key] = jnp.array(value)
+                        else:
+                            self.spf_params[key] = value
                 with open(os.path.join(dirname,'{}_{}_psfparams.json'.format(self.name,self.last_fit)), 'r') as read_file:
                     self.psf_params = json.load(read_file)
-                print("NOTE: MISC PARAMS SAVING NOT YET IMPLEMENTED")
-                #with open(os.path.join(dirname,'{}_{}_miscparams.json'.format(self.name,self.last_fit)), 'r') as read_file:
-                    #self.misc_params = json.load(read_file)
+                with open(os.path.join(dirname,'{}_{}_miscparams.json'.format(self.name,self.last_fit)), 'r') as read_file:
+                    serializable_misc = json.load(read_file)
+                    for key, value in serializable_misc.items():
+                        if isinstance(value, list):
+                            self.misc_params[key] = jnp.array(value)
+                        else:
+                            self.misc_params[key] = value
                 print("Loaded machine readable files from json in "+dirname)
             except FileNotFoundError:
                 print("File not found. Please check the directory and file names.")
