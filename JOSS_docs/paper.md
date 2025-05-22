@@ -15,9 +15,6 @@ authors:
   - name: Maxwell A. Millar-Blanchaer
     orcid: 0000-0000-0000-0000
     affiliation: 1
-  - name: Jaren Ashcraft
-    orcid: 0000-0000-0000-0000
-    affiliation: 1
 affiliations:
  - name: Lyman Spitzer, Jr. Fellow, Princeton University, United States
    index: 1
