@@ -4,6 +4,7 @@ from disk_model.SLD_utils import *
 from scipy.optimize import minimize
 from optimization.mcmc_model import MCMC_model
 from disk_model.objective_functions import objective_model, objective_ll, objective_fit, log_likelihood
+import json
 
 # Built for new objective function
 class Optimizer:
@@ -18,6 +19,7 @@ class Optimizer:
         self.PSFModel = PSFModel
         self.kwargs = kwargs
         self.name = 'test'
+        self.last_fit = None
 
     def model(self):
         return objective_model(
@@ -50,6 +52,9 @@ class Optimizer:
 
         if disp_soln:
             print(soln)
+
+        self.last_fit = 'scipyminimize'
+
         return soln
     
     def scipy_bounded_optimize(self, fit_keys, fit_bounds, logscaled_params, array_params, target_image, err_map,
@@ -88,6 +93,9 @@ class Optimizer:
 
         if disp_soln:
             print(soln)
+
+        self.last_fit = 'scipyboundminimize'
+
         return soln
 
     def mcmc(self, fit_keys, logscaled_params, array_params, target_image, err_map, BOUNDS, nwalkers=250, niter=250, burns=50,continue_from=False):
@@ -142,6 +150,8 @@ class Optimizer:
         mc_soln = np.median(mc_model.sampler.flatchain, axis=0)
         param_list = self._unflatten_params(mc_soln, fit_keys, logscales, is_arrays)
         self._update_params(param_list, fit_keys)
+
+        self.last_fit = 'mcmc'
 
         return mc_model
     
@@ -352,6 +362,78 @@ class Optimizer:
             select_bools.append(key in selected_params)
         return select_bools
 
+    def save_human_readable(self,dirname):
+        with open(os.path.join(dirname,'{}_{}_hrparams.txt'.format(self.name,self.last_fit)), 'w') as save_file:
+            save_file.write('Model Name: {}\n \n'.format(self.name))
+            save_file.write('Method: {}\n \n'.format(self.last_fit))
+            save_file.write('### Disk Params ### \n')
+            for key in self.disk_params:
+                save_file.write("{}: {}\n".format(key, self.disk_params[key]))
+            save_file.write('\n### SPF Params ### \n')
+            for key in self.spf_params:
+                save_file.write("{}: {}\n".format(key, self.spf_params[key]))
+            save_file.write('\n### PSF Params ### \n')
+            for key in self.psf_params:
+                save_file.write("{}: {}\n".format(key, self.psf_params[key]))
+            save_file.write('\n### Misc Params ### \n')
+            for key in self.misc_params:
+                save_file.write("{}: {}\n".format(key, self.misc_params[key]))
+        print("Saved human readable file to {}".format(os.path.join(dirname,'{}_{}_hrparams.txt'.format(self.name,self.last_fit))))
+
+    def save_machine_readable(self,dirname):
+        with open(os.path.join(dirname,'{}_{}_diskparams.json'.format(self.name,self.last_fit)), 'w') as save_file:
+            json.dump(self.disk_params, save_file)
+        with open(os.path.join(dirname,'{}_{}_spfparams.json'.format(self.name,self.last_fit)), 'w') as save_file:
+            serializable_spf = {}
+            for key, value in self.spf_params.items():
+                if isinstance(value, jnp.ndarray):
+                    serializable_spf[key] = value.tolist()
+                else:
+                    serializable_spf[key] = value
+            json.dump(serializable_spf, save_file)
+        with open(os.path.join(dirname,'{}_{}_psfparams.json'.format(self.name,self.last_fit)), 'w') as save_file:
+            json.dump(self.psf_params, save_file)
+        with open(os.path.join(dirname,'{}_{}_miscparams.json'.format(self.name,self.last_fit)), 'w') as save_file:
+            serializable_misc = {}
+            for key, value in self.misc_params.items():
+                if isinstance(value, jnp.ndarray):
+                    serializable_misc[key] = value.tolist()
+                else:
+                    serializable_misc[key] = value
+            json.dump(serializable_misc, save_file)
+        print("Saved machine readable files to json in "+dirname)
+    
+    def load_machine_readable(self,dirname,method=None):
+        ### defaults to last fitting mechanism, but can be changed to scipyminimize, scipyboundminimize, or mcmc
+        if method == None:
+            method = self.last_fit
+        if self.last_fit == None:
+            raise Exception("No last fit to load from. Please run a fit before loading.")
+        else:
+            try:
+                with open(os.path.join(dirname,'{}_{}_diskparams.json'.format(self.name,self.last_fit)), 'r') as read_file:
+                    self.disk_params = json.load(read_file)
+                with open(os.path.join(dirname,'{}_{}_spfparams.json'.format(self.name,self.last_fit)), 'r') as read_file:
+                    serializable_spf = json.load(read_file)
+                    for key, value in serializable_spf.items():
+                        if isinstance(value, list):
+                            self.spf_params[key] = jnp.array(value)
+                        else:
+                            self.spf_params[key] = value
+                with open(os.path.join(dirname,'{}_{}_psfparams.json'.format(self.name,self.last_fit)), 'r') as read_file:
+                    self.psf_params = json.load(read_file)
+                with open(os.path.join(dirname,'{}_{}_miscparams.json'.format(self.name,self.last_fit)), 'r') as read_file:
+                    serializable_misc = json.load(read_file)
+                    for key, value in serializable_misc.items():
+                        if isinstance(value, list):
+                            self.misc_params[key] = jnp.array(value)
+                        else:
+                            self.misc_params[key] = value
+                print("Loaded machine readable files from json in "+dirname)
+            except FileNotFoundError:
+                print("File not found. Please check the directory and file names.")
+                return
+
 class OptimizeUtils:
     
     @classmethod
@@ -399,3 +481,5 @@ class OptimizeUtils:
         mask = radii <= mask_rad
 
         return mask
+    
+    
