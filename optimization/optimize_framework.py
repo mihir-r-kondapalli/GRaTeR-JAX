@@ -381,14 +381,16 @@ class Optimizer:
         print("Saved human readable file to {}".format(os.path.join(dirname,'{}_{}_hrparams.txt'.format(self.name,self.last_fit))))
 
     def save_machine_readable(self,dirname):
-        with open(os.path.join(dirname,'{}_{}_diskparams.txt'.format(self.name,self.last_fit)), 'w') as save_file:
+        with open(os.path.join(dirname,'{}_{}_diskparams.json'.format(self.name,self.last_fit)), 'w') as save_file:
             json.dump(self.disk_params, save_file)
-        with open(os.path.join(dirname,'{}_{}_spfparams.txt'.format(self.name,self.last_fit)), 'w') as save_file:
-            json.dump(self.spf_params, save_file)
-        with open(os.path.join(dirname,'{}_{}_psfparams.txt'.format(self.name,self.last_fit)), 'w') as save_file:
+        print("NOTE: SPF SAVING NOT YET IMPLEMENTED")
+        #with open(os.path.join(dirname,'{}_{}_spfparams.json'.format(self.name,self.last_fit)), 'w') as save_file:
+            #json.dump(self.spf_params, save_file)
+        with open(os.path.join(dirname,'{}_{}_psfparams.json'.format(self.name,self.last_fit)), 'w') as save_file:
             json.dump(self.psf_params, save_file)
-        with open(os.path.join(dirname,'{}_{}_miscparams.txt'.format(self.name,self.last_fit)), 'w') as save_file:
-            json.dump(self.misc_params, save_file)
+        print("NOTE: MISC PARM SAVING NOT YET IMPLEMENTED")
+        #with open(os.path.join(dirname,'{}_{}_miscparams.json'.format(self.name,self.last_fit)), 'w') as save_file:
+            #json.dump(self.misc_params, save_file)
         print("Saved machine readable files to json in "+dirname)
     
     def load_machine_readable(self,dirname,method=None):
@@ -399,14 +401,16 @@ class Optimizer:
             raise Exception("No last fit to load from. Please run a fit before loading.")
         else:
             try:
-                with open(os.path.join(dirname,'{}_{}_diskparams.txt'.format(self.name,self.last_fit)), 'r') as read_file:
+                with open(os.path.join(dirname,'{}_{}_diskparams.json'.format(self.name,self.last_fit)), 'r') as read_file:
                     self.disk_params = json.load(read_file)
-                with open(os.path.join(dirname,'{}_{}_spfparams.txt'.format(self.name,self.last_fit)), 'r') as read_file:
-                    self.spf_params = json.load(read_file)
-                with open(os.path.join(dirname,'{}_{}_psfparams.txt'.format(self.name,self.last_fit)), 'r') as read_file:
+                print("NOTE: SPF SAVING NOT YET IMPLEMENTED")
+                #with open(os.path.join(dirname,'{}_{}_spfparams.json'.format(self.name,self.last_fit)), 'r') as read_file:
+                    #self.spf_params = json.load(read_file)
+                with open(os.path.join(dirname,'{}_{}_psfparams.json'.format(self.name,self.last_fit)), 'r') as read_file:
                     self.psf_params = json.load(read_file)
-                with open(os.path.join(dirname,'{}_{}_miscparams.txt'.format(self.name,self.last_fit)), 'r') as read_file:
-                    self.misc_params = json.load(read_file)
+                print("NOTE: MISC PARAMS SAVING NOT YET IMPLEMENTED")
+                #with open(os.path.join(dirname,'{}_{}_miscparams.json'.format(self.name,self.last_fit)), 'r') as read_file:
+                    #self.misc_params = json.load(read_file)
                 print("Loaded machine readable files from json in "+dirname)
             except FileNotFoundError:
                 print("File not found. Please check the directory and file names.")
