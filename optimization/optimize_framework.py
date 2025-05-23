@@ -161,7 +161,7 @@ class Optimizer:
                 self.spf_params['num_knots'] = 4
             else:
                 self.spf_params['num_knots'] = 6
-        self.spf_params['up_bound'] = jnp.cos(jnp.deg2rad(90-self.disk_params['inclination']-buffer))
+        self.spf_params['forwardscatt_bound'] = jnp.cos(jnp.deg2rad(90-self.disk_params['inclination']-buffer))
         self.spf_params['low_bound'] = jnp.cos(jnp.deg2rad(90+self.disk_params['inclination']+buffer))
         return self.spf_params
     
@@ -184,14 +184,14 @@ class Optimizer:
             
         self.spf_params['knot_values'] = self.spf_params['knot_values'] * knot_scale
 
-        if self.FuncModel == FixedInterpolatedUnivariateSpline_SPF:
-            adjust_scale = 1.0 / InterpolatedUnivariateSpline_SPF.compute_phase_function_from_cosphi(
-                InterpolatedUnivariateSpline_SPF.init(self.spf_params['knot_values'], InterpolatedUnivariateSpline_SPF.get_knots(self.spf_params)),
-                0.0)
-            self.spf_params['knot_values'] = self.spf_params['knot_values'] * adjust_scale
-            self.misc_params['flux_scaling'] = self.misc_params['flux_scaling'] / adjust_scale
-        else:
-            self.scale_spline_to_fixed_point(0, 1)
+        #if self.FuncModel == FixedInterpolatedUnivariateSpline_SPF:
+            #adjust_scale = 1.0 / InterpolatedUnivariateSpline_SPF.compute_phase_function_from_cosphi(
+                #InterpolatedUnivariateSpline_SPF.init(self.spf_params['knot_values'], InterpolatedUnivariateSpline_SPF.get_knots(self.spf_params)),
+                #0.0)
+            #self.spf_params['knot_values'] = self.spf_params['knot_values'] * adjust_scale
+            #self.misc_params['flux_scaling'] = self.misc_params['flux_scaling'] / adjust_scale
+        #else:
+        self.scale_spline_to_fixed_point(0, 1)
 
     def scale_spline_to_fixed_point(self, cosphi, spline_val):
         adjust_scale = spline_val / InterpolatedUnivariateSpline_SPF.compute_phase_function_from_cosphi(
