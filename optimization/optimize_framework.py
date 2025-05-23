@@ -162,7 +162,7 @@ class Optimizer:
             else:
                 self.spf_params['num_knots'] = 6
         self.spf_params['forwardscatt_bound'] = jnp.cos(jnp.deg2rad(90-self.disk_params['inclination']-buffer))
-        self.spf_params['low_bound'] = jnp.cos(jnp.deg2rad(90+self.disk_params['inclination']+buffer))
+        self.spf_params['backscatt_bound'] = jnp.cos(jnp.deg2rad(90+self.disk_params['inclination']+buffer))
         return self.spf_params
     
     def scale_initial_knots(self, target_image, dhg_params = [0.5, 0.5, 0.5]):
