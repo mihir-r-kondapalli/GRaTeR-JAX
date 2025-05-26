@@ -234,15 +234,15 @@ class Optimizer:
         param_list = []
         for i, key in enumerate(fit_keys):
             # Get parameter from appropriate dictionary
-            if key in self.disk_params:
+            if isinstance(self.disk_params, dict) and key in self.disk_params:
                 value = self.disk_params[key]
-            elif key in self.spf_params:
+            elif isinstance(self.spf_params, dict) and key in self.spf_params:
                 value = self.spf_params[key]
-            elif key in self.psf_params:
+            elif isinstance(self.psf_params, dict) and key in self.psf_params:
                 value = self.psf_params[key]
-            elif key in self.stellar_psf_params:
+            elif isinstance(self.stellar_psf_params, dict) and key in self.stellar_psf_params:
                 value = self.stellar_psf_params[key]
-            elif key in self.misc_params:
+            elif isinstance(self.misc_params, dict) and key in self.misc_params:
                 value = self.misc_params[key]
             else:
                 raise ValueError(f"{key} not in any of the parameter dictionaries!")
@@ -294,7 +294,7 @@ class Optimizer:
             if is_arrays[i]:
                 # For arrays, determine the size
                 for param_dict in [self.disk_params, self.spf_params, self.psf_params, self.stellar_psf_params, self.misc_params]:
-                    if key in param_dict and hasattr(param_dict[key], "__len__"):
+                    if isinstance(param_dict, dict) and key in param_dict and hasattr(param_dict[key], "__len__"):
                         array_size = len(param_dict[key])
                         break
                 else:
@@ -339,15 +339,15 @@ class Optimizer:
         for i, key in enumerate(fit_keys):
             value = param_values[i]
             
-            if key in self.disk_params:
+            if isinstance(self.disk_params, dict) and key in self.disk_params:
                 self.disk_params[key] = value
-            elif key in self.spf_params:
+            elif isinstance(self.spf_params, dict) and key in self.spf_params:
                 self.spf_params[key] = value
-            elif key in self.psf_params:
+            elif isinstance(self.psf_params, dict) and key in self.psf_params:
                 self.psf_params[key] = value
-            elif key in self.stellar_psf_params:
+            elif isinstance(self.stellar_psf_params, dict) and key in self.stellar_psf_params:
                 self.stellar_psf_params[key] = value
-            elif key in self.misc_params:
+            elif isinstance(self.misc_params, dict) and key in self.misc_params:
                 self.misc_params[key] = value
             else:
                 raise ValueError(f"{key} not in any of the parameter dictionaries!")
