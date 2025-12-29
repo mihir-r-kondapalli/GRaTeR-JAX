@@ -170,6 +170,7 @@ class Optimizer:
         float
             Log likelihood value of the current model.
         """
+        self._set_size_to_target_image(target_image)
         return objective_fit(
             params_fit, fit_keys, self.disk_params, self.spf_params, self.psf_params, self.misc_params,
             self.DiskModel, self.DistrModel, self.FuncModel, self.PSFModel, target_image, err_map,
@@ -368,6 +369,8 @@ class Optimizer:
         soln : scipy.optimize.OptimizeResult
             The result of the optimization. Includes optimized parameters, success status, and diagnostic information.
         """
+
+        self._set_size_to_target_image(target_image)
         
         logscales = self._highlight_selected_params(fit_keys, logscaled_params)
         is_arrays = self._highlight_selected_params(fit_keys, array_params)
@@ -443,6 +446,8 @@ class Optimizer:
         soln : scipy.optimize.OptimizeResult
             The result of the optimization. Includes optimized parameters, success status, and diagnostic information.
         """
+
+        self._set_size_to_target_image(target_image)
 
         logscales = self._highlight_selected_params(fit_keys, logscaled_params)
         is_arrays = self._highlight_selected_params(fit_keys, array_params)
@@ -537,6 +542,9 @@ class Optimizer:
         Exception
             If the initial guess is out of the specified parameter bounds.
         """
+
+        self._set_size_to_target_image(target_image)
+
         logscales = self._highlight_selected_params(fit_keys, logscaled_params)
         is_arrays = self._highlight_selected_params(fit_keys, array_params)
 
@@ -649,6 +657,9 @@ class Optimizer:
             Initial double henyey greenstein function values that the spline will be oriented to match for the initial
             guess.
         """
+
+        self._set_size_to_target_image(target_image)
+
         ## Get a good scaling
         y, x = np.indices(target_image.shape)
         y -= self.misc_params['ny']//2
@@ -834,6 +845,8 @@ class Optimizer:
         -------
         None
         """
+
+        self._set_size_to_target_image(target_image)
 
         N = len(StellarPSFReference.reference_images)
         H, W = target_image.shape
@@ -1191,6 +1204,7 @@ class Optimizer:
         tuple
             Tuple containing raw gradients for (disk_params, spf_params, psf_params, stellar_psf_params).
         """
+        self._set_size_to_target_image(target_image)
         return objective_grad(
             self.disk_params, self.spf_params, self.psf_params, self.misc_params, self.DiskModel,
             self.DistrModel, self.FuncModel, self.PSFModel, target_image, err_map,
@@ -1261,6 +1275,18 @@ class Optimizer:
                 param_index += 1
 
         return np.concatenate(corrected)
+    
+    def _set_size_to_target_image(self, target_image):
+        """
+        Set the model image size parameters to match the target image dimensions.
+
+        Parameters
+        ----------
+        target_image : ndarray
+            The target image whose dimensions will be used to set the model size.
+        """
+        self.misc_params['nx'] = target_image.shape[1]
+        self.misc_params['ny'] = target_image.shape[0]
 
 class OptimizeUtils:
 
