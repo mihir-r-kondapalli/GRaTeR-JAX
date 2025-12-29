@@ -48,4 +48,5 @@ This work was developed by the **UCSB Exoplanet Polarimetry Lab**.
 :maxdepth: 2
 
 api/index
+guide/index
 tutorials/index
