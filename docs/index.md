@@ -47,6 +47,6 @@ This work was developed by the **UCSB Exoplanet Polarimetry Lab**.
 ```{toctree}
 :maxdepth: 2
 
-api/index
 guide/index
+api/index
 tutorials/index
