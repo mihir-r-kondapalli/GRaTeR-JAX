@@ -2,16 +2,20 @@
 
 [![Run Tests](https://github.com/UCSB-Exoplanet-Polarimetry-Lab/GRaTeR-JAX/actions/workflows/tests.yml/badge.svg)](https://github.com/UCSB-Exoplanet-Polarimetry-Lab/GRaTeR-JAX/actions/workflows/tests.yml)
 
+<<<<<<< HEAD
 **GRaTeR-JAX** is a machine learning JAX-based implementation of the **Generalized Radial Transporter (GRaTeR)** framework [(Augereau+ 1999)](https://arxiv.org/abs/astro-ph/9906429), designed for modeling scattered-light images of debris disks. This repository provides tools for forward modeling, optimization, and parameter estimation of scattered-light disk images using JAX's accelerated computations.
+=======
+**GRaTeR-JAX** is a machine learning JAX-based implementation of the **Generalized Radial Transporter (GRaTeR)** framework [(Augereau+ 1999)](https://ui.adsabs.harvard.edu/abs/1999A%26A...348..557A/abstract), designed for modeling scattered light observations of debris disks. This repository provides tools for forward modeling, optimization, and parameter estimation of debris disk images using JAX's accelerated computations.
+>>>>>>> 31f7623 (revised readme and index for read the docs)
 
 <img src="https://github.com/user-attachments/assets/c10f45e8-5449-4891-b6a7-33954cf6d954" width="300">
 
 ## Features
 
 - **JAX-Based Optimization**: Leverages JAX for fast, GPU/TPU-accelerated disk modeling.
-- **Scattered Light Disk Modeling**: Implements physical models of exoplanetary debris disks.
+- **Scattered Light Debris Disk Modeling**: Implements physical models of circumstellar debris disks.
 - **Differentiable Framework**: Enables gradient-based optimization and probabilistic inference.
-- **Integration with Webbpsf**: Supports JWST PSF convolutions for forward modeling.
+- **Integration with Webbpsf**: Supports JWST PSF convolutions for forward modeling. (Experimental)
 
 ## Installation
 
