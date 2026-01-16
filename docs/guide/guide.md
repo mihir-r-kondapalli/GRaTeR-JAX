@@ -1,6 +1,6 @@
 # GRaTeR-JAX: Architecture & Workflow Overview
 
-This page provides a **high-level introduction**, **conceptual workflow**, and **block-diagram–driven understanding** of the GRaTeR-JAX codebase. It is intended to help new users and contributors quickly understand how the different components fit together—from user scripts and notebooks, through optimization logic, down to JAX-compiled disk models and gradients.
+This page provides a **high-level introduction**, **conceptual workflow**, and **block-diagram–driven understanding** of the GRaTeR-JAX codebase. It is intended to help new users and contributors quickly understand how the different components fit together: from user scripts and notebooks, through optimization logic, down to JAX-compiled disk models and gradients.
 
 ## Installation
 
@@ -22,9 +22,9 @@ Highly recommended to install this on a fresh environment, just to be safe.
 
 ## 1. What is GRaTeR-JAX?
 
-**GRaTeR-JAX** is a JAX-native, differentiable implementation of the classical GRaTeR scattered-light debris disk framework. It is designed to:
+**GRaTeR-JAX** is a JAX-native, differentiable implementation of the GRaTeR scattered-light debris disk framework from [Augereau+ 1999](https://ui.adsabs.harvard.edu/abs/1999A%26A...348..557A/abstract). It is designed to:
 
-- Forward-model scattered-light images of circumstellar disks  
+- Model scattered-light images of circumstellar **debris disks** 
 - Enable **gradient-based optimization** and **probabilistic inference (MCMC)**  
 - Run efficiently on CPU/GPU via **JAX JIT compilation**
 
@@ -41,7 +41,7 @@ The library cleanly separates:
 At a high level, a typical GRaTeR-JAX workflow looks like:
 
 1. Define a **disk model** (density profile, scattering phase function, PSF handling)
-2. Specify **initial parameter guesses** and configuration
+2. Specify **initial parameter guesses** and model configuration
 3. Load a **target image**, error map, and optional empirical PSF
 4. JIT-compile the forward model and gradients
 5. Run either:
@@ -62,15 +62,14 @@ The diagram below represents the **conceptual optimization pipeline** exposed to
 ### Key stages
 
 - **Define Disk Model**
-  - Disk type
   - Dust distribution
-  - Scattering phase function
-  - On-axis / off-axis PSF handling
+  - Scattering phase function (SPF, e.g. Henyey-Greenstein vs. Spline)
+  - On-axis / off-axis PSF handling (Optional)
 
 - **Define Initial Guess**
   - Morphological parameters
-  - Phase-function parameters
-  - Throughput maps / misc parameters
+  - SPF parameters
+  - Throughput maps / misc parameters (e.g. distance to system, flux scaling)
 
 - **Initialize Optimizer**
   - Creates a central object coordinating data, parameters, and JAX functions
@@ -82,11 +81,11 @@ The diagram below represents the **conceptual optimization pipeline** exposed to
 
 - **JIT Compilation**
   - Forward model
-  - Gradients (analytic via JAX autodiff)
+  - Gradients (analytic via JAX automatic differentiation)
 
 - **Optimization / MCMC**
   - SciPy minimization **or**
-  - MCMC sampling and posterior analysis
+  - MCMC sampling
 
 ---
 
