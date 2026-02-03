@@ -35,6 +35,7 @@ dependencies = [
     "arviz>=0.15,<0.18",
     "corner>=2.2,<2.3",
     "xarray>=2023.1,<2024.10",
+    "h5py>=3.11.0",
 
     # --- JAX ecosystem (GPU-compatible, pinned) ---
     "jax>=0.4.20,<=0.4.34",
