@@ -183,10 +183,16 @@ class DustEllipticalDistribution2PowerLaws(Jax_class):
 
         radial_ratio = r*(1-distr["e"]*costheta)/((distr["p"])+1e-8)
 
-        den = (jnp.power(jnp.abs(radial_ratio)+1e-8, -2*distr["alpha_in"]) +
-               jnp.power(jnp.abs(radial_ratio)+1e-8, -2*distr["alpha_out"]))
-
-        radial_density_term = jnp.sqrt(2./(den+1e-8))*distr["dens_at_r0"]
+        # Log-space computation to avoid overflow when alpha_in is large
+        # and radial_ratio is small (e.g. (1e-8)^(-60) overflows float64).
+        # Mathematically equivalent to:
+        #   den = |rr|^(-2*alpha_in) + |rr|^(-2*alpha_out)
+        #   radial_density = sqrt(2/den) * dens_at_r0
+        log_rr = jnp.log(jnp.abs(radial_ratio) + 1e-8)
+        log_den_in = -2.0 * distr["alpha_in"] * log_rr
+        log_den_out = -2.0 * distr["alpha_out"] * log_rr
+        log_den = jnp.logaddexp(log_den_in, log_den_out)
+        radial_density_term = jnp.sqrt(2.0) * jnp.exp(-0.5 * log_den) * distr["dens_at_r0"]
         #if distr["pmin"] > 0:
         #    radial_density_term[r/(distr["pmin"]/(1-distr["e"]*costheta)) <= 1] = 0
         radial_density_term = jnp.where(distr["pmin"] > 0, 
@@ -241,9 +247,11 @@ class HenyeyGreenstein_SPF(Jax_class):
             must be calculated.
         """
         p_dict = cls.unpack_pars(phase_func_params)
-        
-        return 1./(4*jnp.pi)*(1-p_dict["g"]**2) / \
-            (1+p_dict["g"]**2-2*p_dict["g"]*cos_phi)**(3./2.)
+
+        # Clamp denominator to prevent extreme gradients when g→±1
+        # and cos_phi→±1 (near-forward/backward scattering singularity).
+        denom = jnp.maximum(1 + p_dict["g"]**2 - 2*p_dict["g"]*cos_phi, 1e-8)
+        return 1./(4*jnp.pi)*(1-p_dict["g"]**2) / (denom * jnp.sqrt(denom))
 
 
 class DoubleHenyeyGreenstein_SPF(Jax_class):
@@ -295,11 +303,15 @@ class DoubleHenyeyGreenstein_SPF(Jax_class):
 
         p_dict = cls.unpack_pars(phase_func_params)
 
+        # Clamp denominators to prevent extreme gradients when g→±1
+        # and cos_phi→±1 (near-forward/backward scattering singularity).
+        denom1 = jnp.maximum(1 + p_dict["g1"]**2 - 2*p_dict["g1"]*cos_phi, 1e-8)
         hg1 = p_dict['weight'] * 1./(4*jnp.pi)*(1-p_dict["g1"]**2) / \
-            (1+p_dict["g1"]**2-2*p_dict["g1"]*cos_phi)**(3./2.)
+            (denom1 * jnp.sqrt(denom1))
+        denom2 = jnp.maximum(1 + p_dict["g2"]**2 - 2*p_dict["g2"]*cos_phi, 1e-8)
         hg2 = (1-p_dict['weight']) * 1./(4*jnp.pi)*(1-p_dict["g2"]**2) / \
-            (1+p_dict["g2"]**2-2*p_dict["g2"]*cos_phi)**(3./2.)
-        
+            (denom2 * jnp.sqrt(denom2))
+
         return hg1+hg2
     
 
@@ -322,7 +334,7 @@ class InterpolatedUnivariateSpline_SPF(Jax_class):
         y values of the knots
     """
 
-    params = {'backscatt_bound': -1, 'forwardscatt_bound': 1, 'num_knots': 6, 'knot_values': jnp.ones(6)}
+    params = {'backscatt_bound': -1, 'forwardscatt_bound': 1, 'num_knots': 6, 'knot_values': (1., 1., 1., 1., 1., 1.)}
 
     @classmethod
     @partial(jax.jit, static_argnums=(0))
