@@ -144,5 +144,6 @@ def test_optimizer_generate_model_and_likelihood():
     fig.colorbar(im2, ax=axes[2], fraction=0.046, pad=0.04)
 
     plt.tight_layout()
-    plt.savefig("test_results/test_optimizer_model.png", dpi=200)
+    os.makedirs(os.path.join(os.path.dirname(__file__), "test_results"), exist_ok=True)
+    plt.savefig(os.path.join(os.path.dirname(__file__), "test_results/test_optimizer_model.png"), dpi=200)
     plt.close(fig)

@@ -333,16 +333,35 @@ class InterpolatedUnivariateSpline_SPF(Jax_class):
     
     @classmethod
     def get_knots(cls, p_dict):
-        return jnp.linspace(p_dict['forwardscatt_bound'], p_dict['backscatt_bound'], p_dict['num_knots'])
+        """
+        Return knot x-positions (in cos_phi space) for the spline SPF.
+
+        Returns ``num_knots + 1`` positions.  A fixed knot is always placed at
+        ``cos_phi = 0`` (90 degrees), which is the normalization point.  The
+        remaining ``num_knots`` positions are split evenly on either side.
+        """
+        n = p_dict['num_knots']
+        n_left = n // 2
+        n_right = n - n_left
+        left = jnp.linspace(p_dict['forwardscatt_bound'], 0.0, n_left + 1)[:-1]
+        right = jnp.linspace(0.0, p_dict['backscatt_bound'], n_right + 1)[1:]
+        return jnp.concatenate([left, jnp.array([0.0]), right])
 
     @classmethod
     @partial(jax.jit, static_argnums=(0))
     def pack_pars(cls, p_arr, knots):
         """
-        This function takes a array of (knots) values and converts them into an InterpolatedUnivariateSpline model.
-        Also has inclination bounds which help narrow the spline fit
-        """    
-        return InterpolatedUnivariateSpline(knots, p_arr)
+        Build an InterpolatedUnivariateSpline from the free knot values.
+
+        ``p_arr`` contains ``num_knots`` free values — the knot y-values at all
+        positions *except* the fixed normalization point at ``cos_phi = 0``.  A
+        value of 1.0 is inserted at the center index (``n_left = len(p_arr) // 2``)
+        before constructing the spline, so ``spline(0) = 1`` by construction.
+        This eliminates the degeneracy between knot scale and ``flux_scaling``.
+        """
+        n_left = len(p_arr) // 2
+        all_values = jnp.concatenate([p_arr[:n_left], jnp.array([1.0]), p_arr[n_left:]])
+        return InterpolatedUnivariateSpline(knots, all_values)
     
     @classmethod
     @partial(jax.jit, static_argnums=(0))
@@ -352,6 +371,10 @@ class InterpolatedUnivariateSpline_SPF(Jax_class):
         angle(s) phi. The argument is not phi but cos(phi) for optimization
         reasons.
 
+        The spline is normalized so that it equals 1 at 90 degrees (cos_phi=0),
+        breaking the degeneracy between the SPF knot values and the absolute
+        flux scaling parameter.
+
         Parameters
         ----------
         spline_model : InterpolatedUnivariateSpline
@@ -360,8 +383,9 @@ class InterpolatedUnivariateSpline_SPF(Jax_class):
             cosine of the scattering angle(s) at which the scattering function
             must be calculated.
         """
-        
-        return spline_model(cos_phi)
+        norm = spline_model(jnp.array(0.0))
+        norm = jnp.where(jnp.abs(norm) < 1e-10, 1.0, norm)
+        return spline_model(cos_phi) / norm
 
 
 class GAUSSIAN_PSF(Jax_class):

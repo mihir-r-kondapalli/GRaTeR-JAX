@@ -3,6 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 import jax
+import jax.numpy as jnp
 jax.config.update("jax_enable_x64", True)
 os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = "0.40"
 
@@ -91,6 +92,7 @@ def test_empirical_gradient():
     })
 
     start_spf_params["num_knots"] = 5
+    start_spf_params["knot_values"] = jnp.ones(5)
 
     start_misc_params.update({
         "distance": 50.0,
@@ -111,9 +113,7 @@ def test_empirical_gradient():
         misc_params=start_misc_params,
     )
 
-    # SPF knots
     opt.inc_bound_knots()
-    opt.initialize_knots(target_image)
 
     # Compile model + gradient (no PSF path)
     opt.jit_compile_model()
@@ -180,6 +180,7 @@ def test_empirical_gradient_PSF():
     })
 
     start_spf_params["num_knots"] = 5
+    start_spf_params["knot_values"] = jnp.ones(5)
 
     # IMPORTANT: distance must match the VIP synthetic generator
     start_misc_params.update({
@@ -203,7 +204,6 @@ def test_empirical_gradient_PSF():
 
     opt.inc_bound_knots()
     opt.set_empirical_psf(emp_psf_image)
-    opt.initialize_knots(target_image)
 
     opt.jit_compile_model()
     opt.jit_compile_gradient(target_image, err_map)

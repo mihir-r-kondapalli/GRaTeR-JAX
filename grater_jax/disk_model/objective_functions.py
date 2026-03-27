@@ -477,9 +477,9 @@ def objective_grad(disk_params, spf_params, psf_params, misc_params,
             PSFModel.pack_pars(psf_params) if isinstance(psf_params, dict) else psf_params,
             StellarPSFModel.pack_pars(stellar_psf_params) if isinstance(stellar_psf_params, dict) else stellar_psf_params,
             target_image, err_map, throughput,
-            distance = misc_params['distance'], pxInArcsec = misc_params['pxInArcsec'],
-            nx = misc_params['nx'], ny = misc_params['ny'], halfNbSlices=misc_params['halfNbSlices'],
-            flux_scaling=misc_params['flux_scaling']
+            misc_params['flux_scaling'],
+            distance=misc_params['distance'], pxInArcsec=misc_params['pxInArcsec'],
+            nx=misc_params['nx'], ny=misc_params['ny'], halfNbSlices=misc_params['halfNbSlices']
         )
     elif not(issubclass(FuncModel, InterpolatedUnivariateSpline_SPF)) and PSFModel == Winnie_PSF:
         gradients = jax_model_winnie_grad(
@@ -488,9 +488,9 @@ def objective_grad(disk_params, spf_params, psf_params, misc_params,
             FuncModel.pack_pars(spf_params) if isinstance(spf_params, dict) else spf_params['knot_values'],
             StellarPSFModel.pack_pars(stellar_psf_params) if isinstance(stellar_psf_params, dict) else stellar_psf_params,
             target_image, err_map, throughput,
-            distance = misc_params['distance'], pxInArcsec = misc_params['pxInArcsec'],
-            nx = misc_params['nx'], ny = misc_params['ny'], halfNbSlices=misc_params['halfNbSlices'],
-            flux_scaling=misc_params['flux_scaling']
+            misc_params['flux_scaling'],
+            distance=misc_params['distance'], pxInArcsec=misc_params['pxInArcsec'],
+            nx=misc_params['nx'], ny=misc_params['ny'], halfNbSlices=misc_params['halfNbSlices']
         )
     elif issubclass(FuncModel, InterpolatedUnivariateSpline_SPF) and PSFModel != Winnie_PSF:
 
@@ -501,9 +501,10 @@ def objective_grad(disk_params, spf_params, psf_params, misc_params,
             PSFModel.pack_pars(psf_params) if isinstance(psf_params, dict) else psf_params,
             StellarPSFModel.pack_pars(stellar_psf_params) if isinstance(stellar_psf_params, dict) else stellar_psf_params,
             target_image, err_map, throughput,
-            distance = misc_params['distance'], pxInArcsec = misc_params['pxInArcsec'],
-            nx = misc_params['nx'], ny = misc_params['ny'], halfNbSlices=misc_params['halfNbSlices'],
-            flux_scaling=misc_params['flux_scaling'], knots=FuncModel.get_knots(spf_params)
+            misc_params['flux_scaling'],
+            distance=misc_params['distance'], pxInArcsec=misc_params['pxInArcsec'],
+            nx=misc_params['nx'], ny=misc_params['ny'], halfNbSlices=misc_params['halfNbSlices'],
+            knots=FuncModel.get_knots(spf_params)
         )
     else:
         gradients = jax_model_spline_winnie_grad(
@@ -512,9 +513,10 @@ def objective_grad(disk_params, spf_params, psf_params, misc_params,
             spf_params['knot_values'],
             StellarPSFModel.pack_pars(stellar_psf_params) if isinstance(stellar_psf_params, dict) else stellar_psf_params,
             target_image, err_map, throughput,
-            distance = misc_params['distance'], pxInArcsec = misc_params['pxInArcsec'],
-            nx = misc_params['nx'], ny = misc_params['ny'], halfNbSlices=misc_params['halfNbSlices'],
-            flux_scaling=misc_params['flux_scaling'], knots=FuncModel.get_knots(spf_params)
+            misc_params['flux_scaling'],
+            distance=misc_params['distance'], pxInArcsec=misc_params['pxInArcsec'],
+            nx=misc_params['nx'], ny=misc_params['ny'], halfNbSlices=misc_params['halfNbSlices'],
+            knots=FuncModel.get_knots(spf_params)
         )
 
     return gradients
@@ -619,9 +621,9 @@ def objective_fit_grad(params_fit, fit_keys, disk_params, spf_params, psf_params
             PSFModel.pack_pars(temp_psf_params) if isinstance(psf_params, dict) else psf_params,
             StellarPSFModel.pack_pars(temp_stellar_psf_params) if isinstance(stellar_psf_params, dict) else stellar_psf_params,
             target_image, err_map, throughput,
-            distance = misc_params['distance'], pxInArcsec = misc_params['pxInArcsec'],
-            nx = misc_params['nx'], ny = misc_params['ny'], halfNbSlices=misc_params['halfNbSlices'],
-            flux_scaling=misc_params['flux_scaling']
+            temp_misc_params['flux_scaling'],
+            distance=misc_params['distance'], pxInArcsec=misc_params['pxInArcsec'],
+            nx=misc_params['nx'], ny=misc_params['ny'], halfNbSlices=misc_params['halfNbSlices']
         )
     elif not(issubclass(FuncModel, InterpolatedUnivariateSpline_SPF)) and PSFModel == Winnie_PSF:
         gradients = jax_model_winnie_grad(
@@ -630,9 +632,9 @@ def objective_fit_grad(params_fit, fit_keys, disk_params, spf_params, psf_params
             FuncModel.pack_pars(temp_spf_params) if isinstance(spf_params, dict) else temp_spf_params['knot_values'],
             StellarPSFModel.pack_pars(temp_stellar_psf_params) if isinstance(stellar_psf_params, dict) else stellar_psf_params,
             target_image, err_map, throughput,
-            distance = misc_params['distance'], pxInArcsec = misc_params['pxInArcsec'],
-            nx = misc_params['nx'], ny = misc_params['ny'], halfNbSlices=misc_params['halfNbSlices'],
-            flux_scaling=misc_params['flux_scaling']
+            temp_misc_params['flux_scaling'],
+            distance=misc_params['distance'], pxInArcsec=misc_params['pxInArcsec'],
+            nx=misc_params['nx'], ny=misc_params['ny'], halfNbSlices=misc_params['halfNbSlices']
         )
     elif issubclass(FuncModel, InterpolatedUnivariateSpline_SPF) and PSFModel != Winnie_PSF:
 
@@ -643,9 +645,10 @@ def objective_fit_grad(params_fit, fit_keys, disk_params, spf_params, psf_params
             PSFModel.pack_pars(temp_psf_params) if isinstance(psf_params, dict) else psf_params,
             StellarPSFModel.pack_pars(temp_stellar_psf_params) if isinstance(stellar_psf_params, dict) else stellar_psf_params,
             target_image, err_map, throughput,
-            distance = misc_params['distance'], pxInArcsec = misc_params['pxInArcsec'],
-            nx = misc_params['nx'], ny = misc_params['ny'], halfNbSlices=misc_params['halfNbSlices'],
-            flux_scaling=misc_params['flux_scaling'], knots=FuncModel.get_knots(temp_spf_params)
+            temp_misc_params['flux_scaling'],
+            distance=misc_params['distance'], pxInArcsec=misc_params['pxInArcsec'],
+            nx=misc_params['nx'], ny=misc_params['ny'], halfNbSlices=misc_params['halfNbSlices'],
+            knots=FuncModel.get_knots(temp_spf_params)
         )
     else:
         gradients = jax_model_spline_winnie_grad(
@@ -654,9 +657,10 @@ def objective_fit_grad(params_fit, fit_keys, disk_params, spf_params, psf_params
             temp_spf_params['knot_values'],
             StellarPSFModel.pack_pars(temp_stellar_psf_params) if isinstance(stellar_psf_params, dict) else stellar_psf_params,
             target_image, err_map, throughput,
-            distance = misc_params['distance'], pxInArcsec = misc_params['pxInArcsec'],
-            nx = misc_params['nx'], ny = misc_params['ny'], halfNbSlices=misc_params['halfNbSlices'],
-            flux_scaling=misc_params['flux_scaling'], knots=FuncModel.get_knots(temp_spf_params)
+            temp_misc_params['flux_scaling'],
+            distance=misc_params['distance'], pxInArcsec=misc_params['pxInArcsec'],
+            nx=misc_params['nx'], ny=misc_params['ny'], halfNbSlices=misc_params['halfNbSlices'],
+            knots=FuncModel.get_knots(temp_spf_params)
         )
 
     return gradients

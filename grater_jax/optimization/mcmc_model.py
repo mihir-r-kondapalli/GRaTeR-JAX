@@ -91,7 +91,7 @@ class MCMC_model():
             return -np.inf
         return lp + self.fun(theta)
 
-    def run(self, initial, nwalkers=500, niter=500, burn_iter=100, nconst=1e-7, continue_from=None, **kwargs):
+    def run(self, initial, nwalkers=500, niter=500, burn_iter=100, nconst=1e-7, continue_from=None, force_reset=False, **kwargs):
         """
         Run MCMC sampling using emcee.
 
@@ -109,6 +109,9 @@ class MCMC_model():
             Perturbation constant for initializing walkers.
         continue_from : bool or None
             Whether to continue from previous run.
+        force_reset : bool, optional
+            If True, reset the backend without prompting. Useful for scripted or
+            notebook contexts where interactive input is not available. Default False.
 
         Returns
         -------
@@ -124,7 +127,10 @@ class MCMC_model():
         backend = emcee.backends.HDFBackend(outfile)
 
         if continue_from is not True:
-            yes = input("This is going to overwrite the previous backend. Do you want to continue? (y/n): ")
+            if force_reset:
+                yes = 'y'
+            else:
+                yes = input("This is going to overwrite the previous backend. Do you want to continue? (y/n): ")
             if yes == 'y':
                 backend.reset(nwalkers, self.ndim)
                 p0 = [np.array(initial) + nconst * np.random.randn(self.ndim) for _ in range(nwalkers)]
