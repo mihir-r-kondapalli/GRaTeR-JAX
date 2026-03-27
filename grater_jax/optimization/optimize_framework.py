@@ -492,10 +492,10 @@ class Optimizer:
 
         return soln
 
-    def mcmc(self, fit_keys, logscaled_params, array_params, target_image, err_map, BOUNDS, nwalkers=250, niter=250, burns=50, 
-            continue_from=False, scale_objective_function_for_shape=False,**kwargs):
+    def mcmc(self, fit_keys, logscaled_params, array_params, target_image, err_map, BOUNDS, nwalkers=250, niter=250, burns=50,
+            resume: bool = False, scale_objective_function_for_shape=False, **kwargs):
         """
-        Runs Markov Chain Monte Carlo (MCMC) sampling using an emcee-based sampler to estimate 
+        Runs Markov Chain Monte Carlo (MCMC) sampling using an emcee-based sampler to estimate
         posterior distributions for model parameters based on the log-likelihood function. Uses
         current parameter dictionary values.
 
@@ -512,7 +512,7 @@ class Optimizer:
         err_map : numpy.ndarray
             2D array of the same shape as `target_image` representing per-pixel uncertainties.
         BOUNDS : tuple of (list, list)
-            Tuple of (lower_bounds, upper_bounds) for each parameter in `fit_keys`. 
+            Tuple of (lower_bounds, upper_bounds) for each parameter in `fit_keys`.
             Each bound can be a scalar or a list if the parameter is an array.
         nwalkers : int, optional
             Number of MCMC walkers. Default is 250.
@@ -520,12 +520,18 @@ class Optimizer:
             Total number of MCMC steps per walker. Default is 250.
         burns : int, optional
             Number of burn-in steps to discard from each chain. Default is 50.
-        continue_from : bool, optional
-            If True, continues from the previous MCMC run stored in the backend. Default is False.
+        resume : bool, optional
+            If True, continue sampling from the existing HDF5 backend, extending
+            the chain by `niter` steps without re-running burn-in. If False
+            (default), start a fresh run and overwrite the existing backend.
+            Pass ``confirm_overwrite=False`` via **kwargs to suppress the
+            interactive overwrite prompt in scripted or notebook contexts.
         scale_objective_function_for_shape : bool, optional
             If True, scales the log-likelihood by the number of pixels in `target_image` to normalize shape differences. Default is False.
         **kwargs : dict
-            Additional arguments passed to the underlying `MCMC_model.run()` method (e.g., custom moves).
+            Additional arguments passed to the underlying `MCMC_model.run()` method.
+            Notable: ``confirm_overwrite=False`` suppresses the interactive prompt
+            when overwriting an existing backend (required in non-interactive contexts).
 
         Returns
         -------
@@ -588,7 +594,7 @@ class Optimizer:
             raise Exception("MCMC Initial Bounds Exception")
 
         mc_model = MCMC_model(ll, (init_lb, init_ub), self.name)
-        mc_model.run(init_x, nconst=1e-7, nwalkers=nwalkers, niter=niter, burn_iter=burns, continue_from=continue_from, **kwargs)
+        mc_model.run(init_x, nconst=1e-7, nwalkers=nwalkers, niter=niter, burn_iter=burns, resume=resume, **kwargs)
 
         mc_soln = mc_model.get_theta_median()
         param_list = self._unflatten_params(mc_soln, fit_keys, logscales, is_arrays)

@@ -91,7 +91,7 @@ class MCMC_model():
             return -np.inf
         return lp + self.fun(theta)
 
-    def run(self, initial, nwalkers=500, niter=500, burn_iter=100, nconst=1e-7, continue_from=None, force_reset=False, **kwargs):
+    def run(self, initial, nwalkers=500, niter=500, burn_iter=100, nconst=1e-7, resume: bool = False, confirm_overwrite: bool = True, **kwargs):
         """
         Run MCMC sampling using emcee.
 
@@ -107,11 +107,17 @@ class MCMC_model():
             Number of burn-in iterations.
         nconst : float
             Perturbation constant for initializing walkers.
-        continue_from : bool or None
-            Whether to continue from previous run.
-        force_reset : bool, optional
-            If True, reset the backend without prompting. Useful for scripted or
-            notebook contexts where interactive input is not available. Default False.
+        resume : bool, optional
+            If True, continue sampling from where the existing HDF5 backend left
+            off. No burn-in is run and the chain is extended by `niter` steps.
+            If False (default), start a fresh run with new burn-in, overwriting
+            the existing backend. See also `confirm_overwrite`.
+        confirm_overwrite : bool, optional
+            Only relevant when `resume=False`. If True (default), prompt the user
+            interactively before overwriting the existing backend — safe for
+            interactive use. Set to False to overwrite silently without prompting,
+            which is required in scripted or notebook contexts where stdin is not
+            available.
 
         Returns
         -------
@@ -126,11 +132,11 @@ class MCMC_model():
         outfile = f"{self.name}_emcee_backend.h5"
         backend = emcee.backends.HDFBackend(outfile)
 
-        if continue_from is not True:
-            if force_reset:
-                yes = 'y'
-            else:
+        if not resume:
+            if confirm_overwrite:
                 yes = input("This is going to overwrite the previous backend. Do you want to continue? (y/n): ")
+            else:
+                yes = 'y'
             if yes == 'y':
                 backend.reset(nwalkers, self.ndim)
                 p0 = [np.array(initial) + nconst * np.random.randn(self.ndim) for _ in range(nwalkers)]
