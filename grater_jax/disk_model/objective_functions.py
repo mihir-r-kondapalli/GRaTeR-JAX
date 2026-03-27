@@ -370,7 +370,7 @@ def objective_fit(params_fit, fit_keys, disk_params, spf_params, psf_params, mis
             StellarPSFModel.pack_pars(temp_stellar_psf_params) if isinstance(stellar_psf_params, dict) else stellar_psf_params,
             throughput, distance = misc_params['distance'], pxInArcsec = misc_params['pxInArcsec'],
             nx = misc_params['nx'], ny = misc_params['ny'], halfNbSlices=misc_params['halfNbSlices'],
-            flux_scaling=misc_params['flux_scaling']
+            flux_scaling=temp_misc_params['flux_scaling']
         )
     elif not(issubclass(FuncModel, InterpolatedUnivariateSpline_SPF)) and PSFModel == Winnie_PSF:
         model_image = jax_model_winnie(
@@ -380,7 +380,7 @@ def objective_fit(params_fit, fit_keys, disk_params, spf_params, psf_params, mis
             StellarPSFModel.pack_pars(temp_stellar_psf_params) if isinstance(stellar_psf_params, dict) else stellar_psf_params,
             throughput, distance = misc_params['distance'], pxInArcsec = misc_params['pxInArcsec'],
             nx = misc_params['nx'], ny = misc_params['ny'], halfNbSlices=misc_params['halfNbSlices'],
-            flux_scaling=misc_params['flux_scaling']
+            flux_scaling=temp_misc_params['flux_scaling']
         )
     elif issubclass(FuncModel, InterpolatedUnivariateSpline_SPF) and PSFModel != Winnie_PSF:
         model_image = jax_model_spline(
@@ -391,7 +391,7 @@ def objective_fit(params_fit, fit_keys, disk_params, spf_params, psf_params, mis
             StellarPSFModel.pack_pars(temp_stellar_psf_params) if isinstance(stellar_psf_params, dict) else stellar_psf_params,
             throughput, distance = misc_params['distance'], pxInArcsec = misc_params['pxInArcsec'],
             nx = misc_params['nx'], ny = misc_params['ny'], halfNbSlices=misc_params['halfNbSlices'],
-            flux_scaling=misc_params['flux_scaling'], knots=FuncModel.get_knots(temp_spf_params)
+            flux_scaling=temp_misc_params['flux_scaling'], knots=FuncModel.get_knots(temp_spf_params)
         )
     else:
         model_image = jax_model_spline_winnie(
@@ -401,7 +401,7 @@ def objective_fit(params_fit, fit_keys, disk_params, spf_params, psf_params, mis
             StellarPSFModel.pack_pars(temp_stellar_psf_params) if isinstance(stellar_psf_params, dict) else stellar_psf_params,
             throughput, distance = misc_params['distance'], pxInArcsec = misc_params['pxInArcsec'],
             nx = misc_params['nx'], ny = misc_params['ny'], halfNbSlices=misc_params['halfNbSlices'],
-            flux_scaling=misc_params['flux_scaling'], knots=FuncModel.get_knots(temp_spf_params)
+            flux_scaling=temp_misc_params['flux_scaling'], knots=FuncModel.get_knots(temp_spf_params)
         )
 
     return log_likelihood(model_image, target_image, err_map)
