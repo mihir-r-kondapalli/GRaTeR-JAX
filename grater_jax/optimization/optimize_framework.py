@@ -403,7 +403,7 @@ class Optimizer:
     
     def scipy_bounded_optimize(self, fit_keys, fit_bounds, logscaled_params, array_params, target_image, err_map,
                        disp_soln=False, iters=500, ftol=1e-12, gtol=1e-12, eps=1e-8, scale = 1.,
-                       use_grad=False, **kwargs):
+                       use_grad=False, maxls=20, **kwargs):
         """
         Runs bounded optimization using SciPy's `minimize` with the L-BFGS-B algorithm to maximize the log-likelihood.
         Uses current parameter dictionary values.
@@ -436,6 +436,9 @@ class Optimizer:
             Scaling factor applied to the objective value and gradient. Default is 1.
         use_grad : bool, optional
             Whether to use the analytical gradient. Default is False.
+        maxls : int, optional
+            Maximum number of line search steps per iteration for L-BFGS-B. Default is 20 (scipy default).
+            Increase (e.g. to 50–100) when ABNORMAL_TERMINATION_IN_LNSRCH is reported at low iteration counts.
         **kwargs : dict
             Additional keyword arguments (currently unused).
 
@@ -480,7 +483,7 @@ class Optimizer:
             i+=1
 
         soln = minimize(ll, init_x, method='L-BFGS-B', bounds=bounds, jac=jac,
-                        options={'disp': True, 'maxiter': iters, 'ftol': ftol, 'gtol': gtol, 'eps': eps})
+                        options={'disp': True, 'maxiter': iters, 'ftol': ftol, 'gtol': gtol, 'eps': eps, 'maxls': maxls})
         
         param_list = self._unflatten_params(soln.x, fit_keys, logscales, is_arrays)
         self._update_params(param_list, fit_keys)
