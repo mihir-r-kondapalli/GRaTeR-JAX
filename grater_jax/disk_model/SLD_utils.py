@@ -322,9 +322,12 @@ def recommended_num_knots(
     is actually probed, with a small outward buffer so knots are not placed
     right at the geometric boundary.
 
-    The minimum returned value is 3, which is the minimum needed for a cubic
-    spline (``get_knots`` returns ``num_knots + 1`` positions including the
-    fixed normalisation knot at cos_phi = 0, giving ≥ 4 control points).
+    The minimum returned value is 4.  While a cubic spline technically requires
+    only 4 control points (``num_knots`` = 3), empirical testing shows that
+    ``num_knots`` = 3 produces a spline that is too rigid: the optimiser
+    consistently converges to image-consistent but SPF-inconsistent local
+    minima at low inclinations.  ``num_knots`` = 4 (5 control points) provides
+    enough flexibility to recover the SPF shape reliably.
 
     Using this function is optional.  Users can always pass ``num_knots``
     directly to ``InterpolatedUnivariateSpline_SPF.params``; this helper just
@@ -346,12 +349,12 @@ def recommended_num_knots(
     -------
     int
         Recommended number of free knots, in the range
-        ``[3, num_knots_full_range]``.
+        ``[4, num_knots_full_range]``.
 
     Examples
     --------
     >>> recommended_num_knots(30.0, 6)
-    3
+    4
     >>> recommended_num_knots(50.0, 6)
     4
     >>> recommended_num_knots(80.0, 6)
@@ -368,7 +371,7 @@ def recommended_num_knots(
     window_deg = float(
         np.degrees(np.arccos(back_bound)) - np.degrees(np.arccos(fwd_bound))
     )
-    nk = max(3, round(num_knots_full_range * window_deg / 180.0))
+    nk = max(4, round(num_knots_full_range * window_deg / 180.0))
     return int(nk)
 
 
