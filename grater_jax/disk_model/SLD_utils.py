@@ -303,8 +303,75 @@ class DoubleHenyeyGreenstein_SPF(Jax_class):
         return hg1+hg2
     
 
-# Uses 6 knots by default
-# Values must be cos(phi) not phi
+def recommended_num_knots(
+    inclination_deg: float,
+    num_knots_full_range: int,
+    boundary_buffer: float = 0.1,
+) -> int:
+    """Return a recommended knot count scaled to the scattering angles probed at a given inclination.
+
+    A disk at inclination *i* samples scattering angles roughly in the range
+    ``[90 - i, 90 + i]`` degrees, which corresponds to cos(phi) in
+    ``[-sin(i), +sin(i)]``.  Placing ``num_knots_full_range`` knots over the
+    full 180-degree range is appropriate when the full range is probed (high
+    inclinations), but over-parameterises the spline for low inclinations where
+    only a narrow window is accessible.  Over-parameterisation makes the
+    optimiser ill-conditioned and can cause convergence failures.
+
+    This function scales the knot count linearly with the angular window that
+    is actually probed, with a small outward buffer so knots are not placed
+    right at the geometric boundary.
+
+    The minimum returned value is 3, which is the minimum needed for a cubic
+    spline (``get_knots`` returns ``num_knots + 1`` positions including the
+    fixed normalisation knot at cos_phi = 0, giving ≥ 4 control points).
+
+    Using this function is optional.  Users can always pass ``num_knots``
+    directly to ``InterpolatedUnivariateSpline_SPF.params``; this helper just
+    provides a principled starting point when the inclination is known.
+
+    Parameters
+    ----------
+    inclination_deg : float
+        Disk inclination in degrees (0 = face-on, 90 = edge-on).
+    num_knots_full_range : int
+        Desired knot count for a disk that probes the full 0–180 degree range.
+        Typically 5–8; the default ``InterpolatedUnivariateSpline_SPF`` uses 6.
+    boundary_buffer : float, optional
+        Buffer added beyond the geometric probed range in cos_phi units before
+        computing the angular window.  Gives the spline a little room at the
+        edges so knots are not placed exactly on the boundary.  Default 0.1.
+
+    Returns
+    -------
+    int
+        Recommended number of free knots, in the range
+        ``[3, num_knots_full_range]``.
+
+    Examples
+    --------
+    >>> recommended_num_knots(30.0, 6)
+    3
+    >>> recommended_num_knots(50.0, 6)
+    4
+    >>> recommended_num_knots(80.0, 6)
+    6
+    """
+    sin_i = np.sin(np.radians(inclination_deg))
+    cp_fwd  =  sin_i   # forward (small angle) boundary in cos_phi
+    cp_back = -sin_i   # backward (large angle) boundary in cos_phi
+
+    fwd_bound  = float(np.clip(cp_fwd  + boundary_buffer, -1.0, 1.0))
+    back_bound = float(np.clip(cp_back - boundary_buffer, -1.0, 1.0))
+
+    # Angular window in degrees — forward bound has larger cos_phi → smaller angle
+    window_deg = float(
+        np.degrees(np.arccos(back_bound)) - np.degrees(np.arccos(fwd_bound))
+    )
+    nk = max(3, round(num_knots_full_range * window_deg / 180.0))
+    return int(nk)
+
+
 class InterpolatedUnivariateSpline_SPF(Jax_class):
     """
     Implementation of a spline scattering phase function. Uses 6 knots by default, takes knot y values as parameters.
@@ -375,6 +442,20 @@ class InterpolatedUnivariateSpline_SPF(Jax_class):
         breaking the degeneracy between the SPF knot values and the absolute
         flux scaling parameter.
 
+        When the spline knots do not cover the full [-1, 1] cos_phi range
+        (i.e., when inclination-dependent knot placement is used), values
+        outside the knot range are extrapolated rather than evaluated with
+        the boundary polynomial segment, which diverges for cubic splines:
+
+        - **Forward side** (cos_phi > knot max): linear extrapolation using
+          the spline's first derivative at the forward boundary. Physically
+          motivated — SPFs typically rise toward forward scattering.
+        - **Backward side** (cos_phi < knot min): constant extrapolation at
+          the backward boundary value. SPFs are typically flat at large angles.
+
+        When knots cover the full [-1, 1] range these branches are never
+        triggered, so this is fully backward-compatible.
+
         Parameters
         ----------
         spline_model : InterpolatedUnivariateSpline
@@ -383,9 +464,30 @@ class InterpolatedUnivariateSpline_SPF(Jax_class):
             cosine of the scattering angle(s) at which the scattering function
             must be calculated.
         """
+        # Knots are stored in decreasing order: _x[0] is forward boundary
+        # (largest cos_phi / smallest scattering angle) and _x[-1] is the
+        # backward boundary (most negative cos_phi / largest angle).
+        x_fwd  = spline_model._x[0]
+        x_back = spline_model._x[-1]
+
+        # In-range evaluation (clamp so the spline is never called out-of-range)
+        cos_phi_clamped = jnp.clip(cos_phi, x_back, x_fwd)
+        spline_val = spline_model(cos_phi_clamped)
+
+        # Forward-side: linear extrapolation preserves the rising slope
+        val_fwd   = spline_model(x_fwd)
+        deriv_fwd = spline_model.derivative(x_fwd)
+        fwd_extrap = val_fwd + deriv_fwd * (cos_phi - x_fwd)
+
+        # Backward-side: constant extrapolation (SPF approximately flat there)
+        back_extrap = spline_model(x_back)
+
+        result = jnp.where(cos_phi > x_fwd,  fwd_extrap,
+                 jnp.where(cos_phi < x_back, back_extrap, spline_val))
+
         norm = spline_model(jnp.array(0.0))
         norm = jnp.where(jnp.abs(norm) < 1e-10, 1.0, norm)
-        return spline_model(cos_phi) / norm
+        return result / norm
 
 
 class GAUSSIAN_PSF(Jax_class):
