@@ -60,6 +60,7 @@ This work was developed by the [**UCSB Exoplanet Polarimetry Lab**](https://ucsb
 ```{toctree}
 :maxdepth: 2
 
+index
 guide/index
-api/index
 tutorials/index
+api/index
