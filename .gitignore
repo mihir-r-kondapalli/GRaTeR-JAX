@@ -17,3 +17,9 @@ tests/stpsf-data
 grater_jax.egg-info
 test
 .gitignore
+# MCMC backends (large HDF5 files)
+docs/tutorials/mcmc_backends/
+# Run logs
+*.log
+# Stray output dirs at repo root
+spline_recovery_plots/
