@@ -106,4 +106,8 @@ Figure sizes can be customized by adding an optional second parameter:
 We acknowledge contributions from Brigitta Sipocz, Syrtis Major, and Semyeong
 Oh, and support from Kathryn Johnston during the genesis of this project.
 
+# AI Usage Statement
+
+Some refactoring, debugging, model validation, and tutorial documentation were done with the use of Claude Code v2.1.87 with Sonnet 4.6. The core functionality was written by human authors, and then improved with Claude Code at later stages in the process. Human authors have reviewed, edited, and validated AI-assisted outputs and have made the core design decisions.
+
 # References
