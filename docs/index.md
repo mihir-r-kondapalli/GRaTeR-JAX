@@ -24,13 +24,13 @@ Developed by the **UCSB Exoplanet Polarimetry Lab**, GRaTeR-JAX provides the fou
 ---
 
 ## Bugs and Feature Requests
-Please use the [GitHub Issue Tracker](https://github.com/UCSB-Exoplanet-Polarimetry-Lab/GRaTeR-JAX/issues) to submit bug reports, documentation issues, or feature requests.  
+Please use the [GitHub Issue Tracker](https://github.com/UCSB-Exoplanet-Polarimetry-Lab/GRaTeR-JAX/issues) to submit bug reports, documentation issues, or feature requests.
 Contributions from the community are always welcome.
 
 ---
 
 ## Attribution
-The development of GRaTeR-JAX is led by **Mihir Kondapalli**, **Briley Lewis**, and **Max Millar-Blanchaer** 
+The development of GRaTeR-JAX is led by **Mihir Kondapalli**, **Briley Lewis**, and **Max Millar-Blanchaer**
 with contributions from members of the **UCSB Exoplanet Polarimetry Lab** and the wider astrophysics software community.
 
 If you build upon this package, please cite both GRaTeR-JAX (Kondapalli et al. in prep JOSS, Lewis et al. in prep AJ) and the original GRaTeR framework [(Augereau+ 1999)](https://ui.adsabs.harvard.edu/abs/1999A%26A...348..557A/abstract).
@@ -51,3 +51,4 @@ index
 guide/index
 tutorials/index
 api/index
+```
