@@ -1,4 +1,4 @@
-# GRaTeR-JAX: Architecture & Workflow Overview
+# Architecture & Workflow Overview
 
 This page provides a **high-level introduction**, **conceptual workflow**, and **block-diagram–driven understanding** of the GRaTeR-JAX codebase. It is intended to help new users and contributors quickly understand how the different components fit together: from user scripts and notebooks, through optimization logic, down to JAX-compiled disk models and gradients.
 
