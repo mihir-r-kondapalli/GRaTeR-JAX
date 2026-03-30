@@ -18,8 +18,6 @@ Main features
 - `Optimizer.scipy_optimize`, `Optimizer.scipy_bounded_optimize` :
   Run SciPy-based minimization with optional analytic gradients.
 - `Optimizer.mcmc` : Run emcee-based MCMC sampling for posterior inference.
-- `Optimizer.initialize_knots`, `scale_spline_to_fixed_point` :
-  Utilities for initializing and normalizing spline-based SPF models.
 - `Optimizer.save_human_readable`, `save_machine_readable`, `load_machine_readable` :
   Save/load model parameters for reproducibility.
 - `OptimizeUtils` :
@@ -405,7 +403,7 @@ class Optimizer:
     
     def scipy_bounded_optimize(self, fit_keys, fit_bounds, logscaled_params, array_params, target_image, err_map,
                        disp_soln=False, iters=500, ftol=1e-12, gtol=1e-12, eps=1e-8, scale = 1.,
-                       use_grad=False, **kwargs):
+                       use_grad=False, maxls=20, **kwargs):
         """
         Runs bounded optimization using SciPy's `minimize` with the L-BFGS-B algorithm to maximize the log-likelihood.
         Uses current parameter dictionary values.
@@ -438,6 +436,9 @@ class Optimizer:
             Scaling factor applied to the objective value and gradient. Default is 1.
         use_grad : bool, optional
             Whether to use the analytical gradient. Default is False.
+        maxls : int, optional
+            Maximum number of line search steps per iteration for L-BFGS-B. Default is 20 (scipy default).
+            Increase (e.g. to 50–100) when ABNORMAL_TERMINATION_IN_LNSRCH is reported at low iteration counts.
         **kwargs : dict
             Additional keyword arguments (currently unused).
 
@@ -482,7 +483,7 @@ class Optimizer:
             i+=1
 
         soln = minimize(ll, init_x, method='L-BFGS-B', bounds=bounds, jac=jac,
-                        options={'disp': True, 'maxiter': iters, 'ftol': ftol, 'gtol': gtol, 'eps': eps})
+                        options={'disp': True, 'maxiter': iters, 'ftol': ftol, 'gtol': gtol, 'eps': eps, 'maxls': maxls})
         
         param_list = self._unflatten_params(soln.x, fit_keys, logscales, is_arrays)
         self._update_params(param_list, fit_keys)
@@ -492,15 +493,12 @@ class Optimizer:
 
         self.last_fit = 'scipyboundminimize'
 
-        if isinstance(self.FuncModel, InterpolatedUnivariateSpline_SPF):
-            self.scale_spline_to_fixed_point(0, 1)
-
         return soln
 
-    def mcmc(self, fit_keys, logscaled_params, array_params, target_image, err_map, BOUNDS, nwalkers=250, niter=250, burns=50, 
-            continue_from=False, scale_objective_function_for_shape=False,**kwargs):
+    def mcmc(self, fit_keys, logscaled_params, array_params, target_image, err_map, BOUNDS, nwalkers=250, niter=250, burns=50,
+            resume: bool = False, scale_objective_function_for_shape=False, **kwargs):
         """
-        Runs Markov Chain Monte Carlo (MCMC) sampling using an emcee-based sampler to estimate 
+        Runs Markov Chain Monte Carlo (MCMC) sampling using an emcee-based sampler to estimate
         posterior distributions for model parameters based on the log-likelihood function. Uses
         current parameter dictionary values.
 
@@ -517,7 +515,7 @@ class Optimizer:
         err_map : numpy.ndarray
             2D array of the same shape as `target_image` representing per-pixel uncertainties.
         BOUNDS : tuple of (list, list)
-            Tuple of (lower_bounds, upper_bounds) for each parameter in `fit_keys`. 
+            Tuple of (lower_bounds, upper_bounds) for each parameter in `fit_keys`.
             Each bound can be a scalar or a list if the parameter is an array.
         nwalkers : int, optional
             Number of MCMC walkers. Default is 250.
@@ -525,12 +523,18 @@ class Optimizer:
             Total number of MCMC steps per walker. Default is 250.
         burns : int, optional
             Number of burn-in steps to discard from each chain. Default is 50.
-        continue_from : bool, optional
-            If True, continues from the previous MCMC run stored in the backend. Default is False.
+        resume : bool, optional
+            If True, continue sampling from the existing HDF5 backend, extending
+            the chain by `niter` steps without re-running burn-in. If False
+            (default), start a fresh run and overwrite the existing backend.
+            Pass ``confirm_overwrite=False`` via **kwargs to suppress the
+            interactive overwrite prompt in scripted or notebook contexts.
         scale_objective_function_for_shape : bool, optional
             If True, scales the log-likelihood by the number of pixels in `target_image` to normalize shape differences. Default is False.
         **kwargs : dict
-            Additional arguments passed to the underlying `MCMC_model.run()` method (e.g., custom moves).
+            Additional arguments passed to the underlying `MCMC_model.run()` method.
+            Notable: ``confirm_overwrite=False`` suppresses the interactive prompt
+            when overwriting an existing backend (required in non-interactive contexts).
 
         Returns
         -------
@@ -593,7 +597,7 @@ class Optimizer:
             raise Exception("MCMC Initial Bounds Exception")
 
         mc_model = MCMC_model(ll, (init_lb, init_ub), self.name)
-        mc_model.run(init_x, nconst=1e-7, nwalkers=nwalkers, niter=niter, burn_iter=burns, continue_from=continue_from, **kwargs)
+        mc_model.run(init_x, nconst=1e-7, nwalkers=nwalkers, niter=niter, burn_iter=burns, resume=resume, **kwargs)
 
         mc_soln = mc_model.get_theta_median()
         param_list = self._unflatten_params(mc_soln, fit_keys, logscales, is_arrays)
@@ -604,16 +608,6 @@ class Optimizer:
         # Unlogscale the internal sampler chain
         array_lengths = [len(self._get_param_value(k)) if k in array_params else 1 for k in fit_keys]
         mcmc_model = OptimizeUtils.unlogscale_mcmc_model(mc_model, fit_keys, logscaled_params, array_params, array_lengths)
-
-        # Scale spline to (0, 1) if FuncModel is a spline
-        if isinstance(self.FuncModel, InterpolatedUnivariateSpline_SPF):
-            current_val = InterpolatedUnivariateSpline_SPF.compute_phase_function_from_cosphi(
-                InterpolatedUnivariateSpline_SPF.init(self.spf_params['knot_values'], 
-                                                    InterpolatedUnivariateSpline_SPF.get_knots(self.spf_params)), 0)
-            scale_factor = 1.0 / current_val if current_val != 0 else 1.0
-            self.scale_spline_to_fixed_point(0, 1)
-            
-            OptimizeUtils.scale_spline_chains(mc_model, fit_keys, array_params, array_lengths, self.spf_params, scale_factor)
 
         mc_model.discard = burns
 
@@ -642,50 +636,6 @@ class Optimizer:
         self.spf_params['forwardscatt_bound'] = jnp.cos(jnp.deg2rad(90-self.disk_params['inclination']-buffer))
         self.spf_params['backscatt_bound'] = jnp.cos(jnp.deg2rad(90+self.disk_params['inclination']+buffer))
         return self.spf_params
-    
-    # Have to call this when using spline spfs
-    def initialize_knots(self, target_image, dhg_params = [0.5, 0.5, 0.5]):
-        """
-        Initializes spline knots and flux scaling value to relatively close values to the target image. Need to run this
-        before any jit_compile method is run due to those methods relying on initialized knots.
-
-        Parameters:
-        -----------
-        target_image : numpy.ndarray
-            2d numpy array of target image
-        dhg_params : list
-            Initial double henyey greenstein function values that the spline will be oriented to match for the initial
-            guess.
-        """
-
-        self._set_size_to_target_image(target_image)
-
-        ## Get a good scaling
-        y, x = np.indices(target_image.shape)
-        y -= self.misc_params['ny']//2
-        x -= self.misc_params['nx']//2 
-        rads = np.sqrt(x**2+y**2)
-        mask = (rads > 12)
-
-        self.spf_params['knot_values'] = DoubleHenyeyGreenstein_SPF.compute_phase_function_from_cosphi(dhg_params, InterpolatedUnivariateSpline_SPF.get_knots(self.spf_params))
-
-        init_image = self.get_model()
-
-        if self.disk_params['inclination'] > 70: 
-            knot_scale = 1.*np.nanpercentile(target_image[mask], 99) / (jnp.nanmax(init_image) + 1e-40)
-        else: 
-            knot_scale = 0.2*np.nanpercentile(target_image[mask], 99) / (jnp.nanmax(init_image) + 1e-40)
-            
-        self.spf_params['knot_values'] = self.spf_params['knot_values'] * knot_scale
-
-        #if self.FuncModel == FixedInterpolatedUnivariateSpline_SPF:
-            #adjust_scale = 1.0 / InterpolatedUnivariateSpline_SPF.compute_phase_function_from_cosphi(
-                #InterpolatedUnivariateSpline_SPF.init(self.spf_params['knot_values'], InterpolatedUnivariateSpline_SPF.get_knots(self.spf_params)),
-                #0.0)
-            #self.spf_params['knot_values'] = self.spf_params['knot_values'] * adjust_scale
-            #self.misc_params['flux_scaling'] = self.misc_params['flux_scaling'] / adjust_scale
-        #else:
-        self.scale_spline_to_fixed_point(0, 1)
 
     def compute_stellar_psf_image(self):
         """
@@ -710,17 +660,6 @@ class Optimizer:
         """
 
         EMP_PSF.img = image
-
-    def scale_spline_to_fixed_point(self, cosphi, spline_val):
-        """
-        Only works for Interpolated Spline SPF Functions. Scales the spline by a single constant to match it with
-        a single point. Usually scaled to (cosphi = 0, spline value = 1).
-        """
-        adjust_scale = spline_val / InterpolatedUnivariateSpline_SPF.compute_phase_function_from_cosphi(
-            InterpolatedUnivariateSpline_SPF.init(self.spf_params['knot_values'], InterpolatedUnivariateSpline_SPF.get_knots(self.spf_params)),
-            cosphi)
-        self.spf_params['knot_values'] = self.spf_params['knot_values'] * adjust_scale
-        self.misc_params['flux_scaling'] = self.misc_params['flux_scaling'] / adjust_scale
 
     def fix_all_nonphysical_params(self):
         """
@@ -1152,11 +1091,6 @@ class Optimizer:
             If a parameter key is not recognized.
         """
 
-        grad_disk = gradients[0]
-        grad_spf = gradients[1]
-        grad_psf = gradients[2] if len(gradients) > 2 else None
-        grad_stellar = gradients[3] if len(gradients) > 3 else gradients[2]
-
         grad_vector = []
 
         # Precompute lookup tables
@@ -1166,6 +1100,20 @@ class Optimizer:
 
         use_interpolated_spf = issubclass(self.FuncModel, InterpolatedUnivariateSpline_SPF)
         use_winnie_psf = self.PSFModel != None and issubclass(self.PSFModel, Winnie_PSF)
+
+        # Unpack gradient tuple.
+        # Non-winnie grad functions return (grad_disk, grad_spf, grad_psf, grad_stellar, grad_flux_scaling).
+        # Winnie grad functions return    (grad_disk, grad_spf, grad_stellar, grad_flux_scaling).
+        grad_disk = gradients[0]
+        grad_spf = gradients[1]
+        if use_winnie_psf:
+            grad_psf = None
+            grad_stellar = gradients[2]
+            grad_flux_scaling = gradients[3] if len(gradients) > 3 else None
+        else:
+            grad_psf = gradients[2] if len(gradients) > 2 else None
+            grad_stellar = gradients[3] if len(gradients) > 3 else gradients[2]
+            grad_flux_scaling = gradients[4] if len(gradients) > 4 else None
 
         if self.StellarPSFModel is not None:
             stellar_grad_dict = self.StellarPSFModel.unpack_pars(grad_stellar)
@@ -1182,6 +1130,10 @@ class Optimizer:
                 grad_vector.append(grad_psf[psf_idx_map[key]])
             elif self.StellarPSFModel is not None and key in self.stellar_psf_params:
                 grad_vector.extend(jnp.ravel(stellar_grad_dict[key]).tolist())  # stellar psf parameters are always arrays
+            elif key == 'flux_scaling':
+                if grad_flux_scaling is None:
+                    raise KeyError("flux_scaling gradient is not available.")
+                grad_vector.append(float(grad_flux_scaling))
             else:
                 raise KeyError(f"Unrecognized key '{key}' in gradient conversion.")
 

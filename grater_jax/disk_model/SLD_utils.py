@@ -303,8 +303,78 @@ class DoubleHenyeyGreenstein_SPF(Jax_class):
         return hg1+hg2
     
 
-# Uses 6 knots by default
-# Values must be cos(phi) not phi
+def recommended_num_knots(
+    inclination_deg: float,
+    num_knots_full_range: int,
+    boundary_buffer: float = 0.1,
+) -> int:
+    """Return a recommended knot count scaled to the scattering angles probed at a given inclination.
+
+    A disk at inclination *i* samples scattering angles roughly in the range
+    ``[90 - i, 90 + i]`` degrees, which corresponds to cos(phi) in
+    ``[-sin(i), +sin(i)]``.  Placing ``num_knots_full_range`` knots over the
+    full 180-degree range is appropriate when the full range is probed (high
+    inclinations), but over-parameterises the spline for low inclinations where
+    only a narrow window is accessible.  Over-parameterisation makes the
+    optimiser ill-conditioned and can cause convergence failures.
+
+    This function scales the knot count linearly with the angular window that
+    is actually probed, with a small outward buffer so knots are not placed
+    right at the geometric boundary.
+
+    The minimum returned value is 4.  While a cubic spline technically requires
+    only 4 control points (``num_knots`` = 3), empirical testing shows that
+    ``num_knots`` = 3 produces a spline that is too rigid: the optimiser
+    consistently converges to image-consistent but SPF-inconsistent local
+    minima at low inclinations.  ``num_knots`` = 4 (5 control points) provides
+    enough flexibility to recover the SPF shape reliably.
+
+    Using this function is optional.  Users can always pass ``num_knots``
+    directly to ``InterpolatedUnivariateSpline_SPF.params``; this helper just
+    provides a principled starting point when the inclination is known.
+
+    Parameters
+    ----------
+    inclination_deg : float
+        Disk inclination in degrees (0 = face-on, 90 = edge-on).
+    num_knots_full_range : int
+        Desired knot count for a disk that probes the full 0–180 degree range.
+        Typically 5–8; the default ``InterpolatedUnivariateSpline_SPF`` uses 6.
+    boundary_buffer : float, optional
+        Buffer added beyond the geometric probed range in cos_phi units before
+        computing the angular window.  Gives the spline a little room at the
+        edges so knots are not placed exactly on the boundary.  Default 0.1.
+
+    Returns
+    -------
+    int
+        Recommended number of free knots, in the range
+        ``[4, num_knots_full_range]``.
+
+    Examples
+    --------
+    >>> recommended_num_knots(30.0, 6)
+    4
+    >>> recommended_num_knots(50.0, 6)
+    4
+    >>> recommended_num_knots(80.0, 6)
+    6
+    """
+    sin_i = np.sin(np.radians(inclination_deg))
+    cp_fwd  =  sin_i   # forward (small angle) boundary in cos_phi
+    cp_back = -sin_i   # backward (large angle) boundary in cos_phi
+
+    fwd_bound  = float(np.clip(cp_fwd  + boundary_buffer, -1.0, 1.0))
+    back_bound = float(np.clip(cp_back - boundary_buffer, -1.0, 1.0))
+
+    # Angular window in degrees — forward bound has larger cos_phi → smaller angle
+    window_deg = float(
+        np.degrees(np.arccos(back_bound)) - np.degrees(np.arccos(fwd_bound))
+    )
+    nk = max(4, round(num_knots_full_range * window_deg / 180.0))
+    return int(nk)
+
+
 class InterpolatedUnivariateSpline_SPF(Jax_class):
     """
     Implementation of a spline scattering phase function. Uses 6 knots by default, takes knot y values as parameters.
@@ -333,16 +403,35 @@ class InterpolatedUnivariateSpline_SPF(Jax_class):
     
     @classmethod
     def get_knots(cls, p_dict):
-        return jnp.linspace(p_dict['forwardscatt_bound'], p_dict['backscatt_bound'], p_dict['num_knots'])
+        """
+        Return knot x-positions (in cos_phi space) for the spline SPF.
+
+        Returns ``num_knots + 1`` positions.  A fixed knot is always placed at
+        ``cos_phi = 0`` (90 degrees), which is the normalization point.  The
+        remaining ``num_knots`` positions are split evenly on either side.
+        """
+        n = p_dict['num_knots']
+        n_left = n // 2
+        n_right = n - n_left
+        left = jnp.linspace(p_dict['forwardscatt_bound'], 0.0, n_left + 1)[:-1]
+        right = jnp.linspace(0.0, p_dict['backscatt_bound'], n_right + 1)[1:]
+        return jnp.concatenate([left, jnp.array([0.0]), right])
 
     @classmethod
     @partial(jax.jit, static_argnums=(0))
     def pack_pars(cls, p_arr, knots):
         """
-        This function takes a array of (knots) values and converts them into an InterpolatedUnivariateSpline model.
-        Also has inclination bounds which help narrow the spline fit
-        """    
-        return InterpolatedUnivariateSpline(knots, p_arr)
+        Build an InterpolatedUnivariateSpline from the free knot values.
+
+        ``p_arr`` contains ``num_knots`` free values — the knot y-values at all
+        positions *except* the fixed normalization point at ``cos_phi = 0``.  A
+        value of 1.0 is inserted at the center index (``n_left = len(p_arr) // 2``)
+        before constructing the spline, so ``spline(0) = 1`` by construction.
+        This eliminates the degeneracy between knot scale and ``flux_scaling``.
+        """
+        n_left = len(p_arr) // 2
+        all_values = jnp.concatenate([p_arr[:n_left], jnp.array([1.0]), p_arr[n_left:]])
+        return InterpolatedUnivariateSpline(knots, all_values)
     
     @classmethod
     @partial(jax.jit, static_argnums=(0))
@@ -352,6 +441,24 @@ class InterpolatedUnivariateSpline_SPF(Jax_class):
         angle(s) phi. The argument is not phi but cos(phi) for optimization
         reasons.
 
+        The spline is normalized so that it equals 1 at 90 degrees (cos_phi=0),
+        breaking the degeneracy between the SPF knot values and the absolute
+        flux scaling parameter.
+
+        When the spline knots do not cover the full [-1, 1] cos_phi range
+        (i.e., when inclination-dependent knot placement is used), values
+        outside the knot range are extrapolated rather than evaluated with
+        the boundary polynomial segment, which diverges for cubic splines:
+
+        - **Forward side** (cos_phi > knot max): linear extrapolation using
+          the spline's first derivative at the forward boundary. Physically
+          motivated — SPFs typically rise toward forward scattering.
+        - **Backward side** (cos_phi < knot min): constant extrapolation at
+          the backward boundary value. SPFs are typically flat at large angles.
+
+        When knots cover the full [-1, 1] range these branches are never
+        triggered, so this is fully backward-compatible.
+
         Parameters
         ----------
         spline_model : InterpolatedUnivariateSpline
@@ -360,8 +467,30 @@ class InterpolatedUnivariateSpline_SPF(Jax_class):
             cosine of the scattering angle(s) at which the scattering function
             must be calculated.
         """
-        
-        return spline_model(cos_phi)
+        # Knots are stored in decreasing order: _x[0] is forward boundary
+        # (largest cos_phi / smallest scattering angle) and _x[-1] is the
+        # backward boundary (most negative cos_phi / largest angle).
+        x_fwd  = spline_model._x[0]
+        x_back = spline_model._x[-1]
+
+        # In-range evaluation (clamp so the spline is never called out-of-range)
+        cos_phi_clamped = jnp.clip(cos_phi, x_back, x_fwd)
+        spline_val = spline_model(cos_phi_clamped)
+
+        # Forward-side: linear extrapolation preserves the rising slope
+        val_fwd   = spline_model(x_fwd)
+        deriv_fwd = spline_model.derivative(x_fwd)
+        fwd_extrap = val_fwd + deriv_fwd * (cos_phi - x_fwd)
+
+        # Backward-side: constant extrapolation (SPF approximately flat there)
+        back_extrap = spline_model(x_back)
+
+        result = jnp.where(cos_phi > x_fwd,  fwd_extrap,
+                 jnp.where(cos_phi < x_back, back_extrap, spline_val))
+
+        norm = spline_model(jnp.array(0.0))
+        norm = jnp.where(jnp.abs(norm) < 1e-10, 1.0, norm)
+        return result / norm
 
 
 class GAUSSIAN_PSF(Jax_class):

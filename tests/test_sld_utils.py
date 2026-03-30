@@ -15,11 +15,14 @@ from grater_jax.disk_model.SLD_utils import (
     DustEllipticalDistribution2PowerLaws,
     HenyeyGreenstein_SPF,
     DoubleHenyeyGreenstein_SPF,
+    InterpolatedUnivariateSpline_SPF,
     GAUSSIAN_PSF,
     LinearStellarPSF,
     PositionalStellarPSF,
     StellarPSFReference,
 )
+from grater_jax.disk_model.SLD_ojax import ScatteredLightDisk
+from grater_jax.disk_model.objective_functions import objective_model, Parameter_Index
 
 # Function mocks
 
@@ -382,7 +385,8 @@ def test_positional_stellar_psf_matches_reference_stitch_multiple_refs():
         fig.colorbar(im2, ax=axes[2], fraction=0.046, pad=0.04)
 
         plt.tight_layout()
-        plt.savefig("test_results/test_positional_stellar_psf.png", dpi=200)
+        os.makedirs(os.path.join(os.path.dirname(__file__), "test_results"), exist_ok=True)
+        plt.savefig(os.path.join(os.path.dirname(__file__), "test_results/test_positional_stellar_psf.png"), dpi=200)
         plt.close(fig)
 
         assert got.shape == (nx, ny)
@@ -403,3 +407,126 @@ def test_gaussian_psf_shape_only():
     )
     out = GAUSSIAN_PSF.generate(image, pars)
     assert jnp.shape(out) == (32, 32)
+
+
+# Spline SPF normalization
+
+def test_spline_spf_normalized_to_1_at_90_degrees():
+    """The spline SPF must return exactly 1.0 when evaluated at cos_phi=0 (90 deg)."""
+    num_knots = 10
+    n_left = num_knots // 2
+    spf_params = InterpolatedUnivariateSpline_SPF.params.copy()
+    spf_params['num_knots'] = num_knots
+    # get_knots returns num_knots+1 positions (including the fixed center at cos_phi=0)
+    all_positions = InterpolatedUnivariateSpline_SPF.get_knots(spf_params)
+
+    # Use non-trivial knot values (HG shape with g=0.5) so the answer isn't trivially 1.
+    # Free values are the num_knots positions excluding the fixed center at index n_left.
+    g = 0.5
+    all_hg = (1.0 / (4.0 * jnp.pi)) * (1 - g**2) / (1 + g**2 - 2*g*all_positions)**1.5
+    free_knot_values = jnp.concatenate([all_hg[:n_left], all_hg[n_left+1:]])
+    spline_model = InterpolatedUnivariateSpline_SPF.pack_pars(free_knot_values, knots=all_positions)
+
+    val_at_90 = InterpolatedUnivariateSpline_SPF.compute_phase_function_from_cosphi(
+        spline_model, jnp.array(0.0)
+    )
+    assert float(val_at_90) == pytest.approx(1.0, rel=1e-6)
+
+
+def test_spline_spf_reproduces_hg_disk_image():
+    """
+    A spline SPF initialized with HG knot values should reproduce the HG disk
+    image to within spline interpolation error, once flux_scaling is adjusted
+    to account for the normalization at 90 degrees.
+
+    The spline normalizes its output by its value at cos_phi=0, so it outputs
+    HG(cos_phi)/HG(0).  Multiplying flux_scaling by HG(0) exactly compensates,
+    and the resulting image should match the raw HG image.
+    """
+    g = 0.3
+    flux_scaling = 1e6
+
+    disk_params = Parameter_Index.disk_params.copy()
+    disk_params.update({
+        "sma": 60.0,
+        "inclination": 60.0,
+        "position_angle": 30.0,
+        "x_center": 70.0,
+        "y_center": 70.0,
+        "halfNbSlices": 25,
+    })
+    misc_params = Parameter_Index.misc_params.copy()
+    misc_params['flux_scaling'] = flux_scaling
+
+    # --- HG reference image ---
+    hg_spf_params = HenyeyGreenstein_SPF.params.copy()
+    hg_spf_params['g'] = g
+    hg_img = objective_model(
+        disk_params, hg_spf_params, None, misc_params,
+        ScatteredLightDisk, DustEllipticalDistribution2PowerLaws,
+        HenyeyGreenstein_SPF, None
+    )
+
+    # HG value at 90 degrees (cos_phi = 0) — the spline normalization factor
+    hg_at_90 = float((1.0 / (4.0 * jnp.pi)) * (1 - g**2) / (1 + g**2)**1.5)
+
+    # --- Spline SPF initialized with HG knot values ---
+    num_knots = 20
+    n_left = num_knots // 2
+    spf_spline_params = InterpolatedUnivariateSpline_SPF.params.copy()
+    spf_spline_params['num_knots'] = num_knots
+    # get_knots returns num_knots+1 positions (including fixed center at cos_phi=0)
+    all_positions = InterpolatedUnivariateSpline_SPF.get_knots(spf_spline_params)
+    all_hg = (1.0 / (4.0 * jnp.pi)) * (1 - g**2) / (1 + g**2 - 2*g*all_positions)**1.5
+    # Free knot y-values: normalized HG at the num_knots free positions.
+    # The fixed center (cos_phi=0) always has value 1.0; free values must be
+    # HG(cos_phi)/HG(0) so the spline shape is consistent with the normalization.
+    spf_spline_params['knot_values'] = (
+        jnp.concatenate([all_hg[:n_left], all_hg[n_left+1:]]) / hg_at_90
+    )
+
+    # The spline divides by HG(0) internally, so boost flux_scaling to compensate
+    spline_misc = misc_params.copy()
+    spline_misc['flux_scaling'] = flux_scaling * hg_at_90
+
+    spline_img = objective_model(
+        disk_params, spf_spline_params, None, spline_misc,
+        ScatteredLightDisk, DustEllipticalDistribution2PowerLaws,
+        InterpolatedUnivariateSpline_SPF, None
+    )
+
+    # Diagnostic plot
+    residual = np.array(hg_img - spline_img)
+    vmin = min(float(hg_img.min()), float(spline_img.min()))
+    vmax = max(float(hg_img.max()), float(spline_img.max()))
+    res_lim = np.max(np.abs(residual))
+
+    fig, axes = plt.subplots(1, 3, figsize=(15, 5))
+    im0 = axes[0].imshow(np.array(hg_img), cmap="inferno", vmin=vmin, vmax=vmax)
+    axes[0].set_title(f"HG SPF (g={g})")
+    fig.colorbar(im0, ax=axes[0], fraction=0.046, pad=0.04)
+
+    im1 = axes[1].imshow(np.array(spline_img), cmap="inferno", vmin=vmin, vmax=vmax)
+    axes[1].set_title(f"Spline SPF ({num_knots} knots, normalized)")
+    fig.colorbar(im1, ax=axes[1], fraction=0.046, pad=0.04)
+
+    im2 = axes[2].imshow(residual, cmap="seismic", vmin=-res_lim, vmax=res_lim)
+    axes[2].set_title("Residual (HG - Spline)")
+    fig.colorbar(im2, ax=axes[2], fraction=0.046, pad=0.04)
+
+    plt.tight_layout()
+    os.makedirs(os.path.join(os.path.dirname(__file__), "test_results"), exist_ok=True)
+    plt.savefig(
+        os.path.join(os.path.dirname(__file__), "test_results/spline_vs_hg_disk_comparison.png"),
+        dpi=200,
+    )
+    plt.close(fig)
+
+    # Allow up to 1% fractional error — dominated by spline interpolation, not normalization
+    nonzero = np.array(hg_img) > 1e-3 * float(hg_img.max())
+    frac_err = np.abs(residual[nonzero]) / np.abs(np.array(hg_img)[nonzero])
+    max_frac_err = float(frac_err.max())
+    assert max_frac_err < 0.01, (
+        f"Max fractional error {max_frac_err:.4f} exceeds 1% — "
+        "spline normalization may be broken"
+    )

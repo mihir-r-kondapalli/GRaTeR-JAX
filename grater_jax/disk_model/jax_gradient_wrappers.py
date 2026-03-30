@@ -64,7 +64,7 @@ def residuals(image, target_image, err_map):
     return result
 
 def jax_model_ll(DiskModel, DistrModel, FuncModel, PSFModel, StellarPSFModel, disk_params, spf_params, psf_params, stellar_psf_params, target_image, err_map,
-              throughput, distance = 0., pxInArcsec = 0., nx = 140, ny = 140, halfNbSlices = 25, flux_scaling = 1e6):
+              throughput, flux_scaling = 1e6, distance = 0., pxInArcsec = 0., nx = 140, ny = 140, halfNbSlices = 25):
     """
     Get the log likelihood for the generated disk model image given disk, scattering function, point spread function,
     stellar psf point spread function, and misceallaneous parameters along with the target image and error map. This
@@ -162,7 +162,7 @@ def jax_model_ll(DiskModel, DistrModel, FuncModel, PSFModel, StellarPSFModel, di
     return log_likelihood(scattered_light_image*throughput, target_image, err_map)
 
 def jax_model_winnie_ll(DiskModel, DistrModel, FuncModel, winnie_psf, StellarPSFModel, disk_params, spf_params, stellar_psf_params, target_image, err_map,
-                     throughput, distance = 0., pxInArcsec = 0., nx = 140, ny = 140, halfNbSlices = 25, flux_scaling = 1e6):
+                     throughput, flux_scaling = 1e6, distance = 0., pxInArcsec = 0., nx = 140, ny = 140, halfNbSlices = 25):
 
     """
     Get the log likelihood for the generated disk model image given disk, scattering function, point spread function,
@@ -257,8 +257,8 @@ def jax_model_winnie_ll(DiskModel, DistrModel, FuncModel, winnie_psf, StellarPSF
     return log_likelihood(scattered_light_image*throughput, target_image, err_map)
 
 def jax_model_spline_ll(DiskModel, DistrModel, FuncModel, PSFModel, StellarPSFModel, disk_params, spf_params, psf_params, stellar_psf_params, target_image, err_map,
-                     throughput, distance = 0., pxInArcsec = 0., nx = 140, ny = 140, halfNbSlices = 25, flux_scaling = 1e6,
-                     knots=jnp.linspace(1,-1,6)):
+                     throughput, flux_scaling = 1e6, distance = 0., pxInArcsec = 0., nx = 140, ny = 140, halfNbSlices = 25,
+                     knots=jnp.linspace(1,-1,7)):
 
     """
     Get the log likelihood for the generated disk model image given disk, scattering function, point spread function,
@@ -359,8 +359,8 @@ def jax_model_spline_ll(DiskModel, DistrModel, FuncModel, PSFModel, StellarPSFMo
     return log_likelihood(scattered_light_image*throughput, target_image, err_map)
 
 def jax_model_spline_winnie_ll(DiskModel, DistrModel, FuncModel, winnie_psf, StellarPSFModel, disk_params, spf_params, stellar_psf_params, target_image, err_map,
-                     throughput, distance = 0., pxInArcsec = 0., nx = 140, ny = 140, halfNbSlices = 25,
-                     flux_scaling = 1e6, knots=jnp.linspace(1,-1,6)):
+                     throughput, flux_scaling = 1e6, distance = 0., pxInArcsec = 0., nx = 140, ny = 140, halfNbSlices = 25,
+                     knots=jnp.linspace(1,-1,7)):
 
     """
     Get the log likelihood for the generated disk model image given disk, scattering function, point spread function,
@@ -467,18 +467,18 @@ Return format: (jnp.array, jnp.array, jnp.array, jnp.array)
 For disk_params, spf_params, psf_params, and stellar_psf_params each flattened in the same order as their corresponding dictionaries
 """
 
-jax_model_grad = jax.jit(jax.grad(jax_model_ll, argnums=(5, 6, 7, 8)),
+jax_model_grad = jax.jit(jax.grad(jax_model_ll, argnums=(5, 6, 7, 8, 12)),
                                 static_argnames=['DiskModel', 'DistrModel', 'FuncModel', 'PSFModel', 'StellarPSFModel',
                                                  'nx', 'ny', 'halfNbSlices'])
 
-jax_model_winnie_grad = jax.jit(jax.grad(jax_model_winnie_ll, argnums=(5, 6, 8)),
+jax_model_winnie_grad = jax.jit(jax.grad(jax_model_winnie_ll, argnums=(5, 6, 7, 11)),
                                 static_argnames=['DiskModel', 'DistrModel', 'FuncModel', 'winnie_psf', 'StellarPSFModel',
                                                  'nx', 'ny', 'halfNbSlices'])
 
-jax_model_spline_grad = jax.jit(jax.grad(jax_model_spline_ll, argnums=(5, 6, 7, 8)),
+jax_model_spline_grad = jax.jit(jax.grad(jax_model_spline_ll, argnums=(5, 6, 7, 8, 12)),
                                 static_argnames=['DiskModel', 'DistrModel', 'FuncModel', 'PSFModel', 'StellarPSFModel',
                                                  'nx', 'ny', 'halfNbSlices'])
 
-jax_model_spline_winnie_grad = jax.jit(jax.grad(jax_model_spline_winnie_ll, argnums=(5, 6, 8)),
+jax_model_spline_winnie_grad = jax.jit(jax.grad(jax_model_spline_winnie_ll, argnums=(5, 6, 7, 11)),
                                 static_argnames=['DiskModel', 'DistrModel', 'FuncModel', 'winnie_psf', 'StellarPSFModel',
                                                  'nx', 'ny', 'halfNbSlices'])

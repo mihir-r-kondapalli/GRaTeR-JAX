@@ -150,7 +150,8 @@ def test_simple_vip_and_grater_jax_generate_images():
     fig.colorbar(im2, ax=axes[2], fraction=0.046, pad=0.04)
 
     plt.tight_layout()
-    plt.savefig("test_results/simple_vip_grater_model_comparison.png", dpi=200)
+    os.makedirs(os.path.join(os.path.dirname(__file__), "test_results"), exist_ok=True)
+    plt.savefig(os.path.join(os.path.dirname(__file__), "test_results/simple_vip_grater_model_comparison.png"), dpi=200)
     plt.close(fig)
 
 
@@ -266,5 +267,6 @@ def test_gaussian_psf_vip_and_grater_jax_generate_images():
     fig.colorbar(im2, ax=axes[2], fraction=0.046, pad=0.04)
 
     plt.tight_layout()
-    plt.savefig("test_results/psf_vip_grater_model_comparison.png", dpi=200)
+    os.makedirs(os.path.join(os.path.dirname(__file__), "test_results"), exist_ok=True)
+    plt.savefig(os.path.join(os.path.dirname(__file__), "test_results/psf_vip_grater_model_comparison.png"), dpi=200)
     plt.close(fig)
