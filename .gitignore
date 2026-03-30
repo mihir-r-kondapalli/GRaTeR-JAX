@@ -23,3 +23,12 @@ docs/tutorials/mcmc_backends/
 *.log
 # Stray output dirs at repo root
 /spline_recovery_plots/
+# Standalone output plots (embedded in tutorial notebook instead)
+docs/tutorials/spline_recovery_plots/
+# Work-in-progress scripts and artifacts
+docs/tutorials/run_mcmc_poisson.py
+docs/tutorials/make_corner_plots.py
+docs/tutorials/compare_grad.py
+docs/tutorials/check_poisson_scipy.py
+docs/tutorials/RESULTS_SUMMARY.md
+docs/tutorials/spline_spf_injection_recovery.ipynb
