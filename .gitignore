@@ -22,4 +22,4 @@ docs/tutorials/mcmc_backends/
 # Run logs
 *.log
 # Stray output dirs at repo root
-spline_recovery_plots/
+/spline_recovery_plots/
