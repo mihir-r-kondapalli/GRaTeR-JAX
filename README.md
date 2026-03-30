@@ -44,7 +44,8 @@ GRaTeR-JAX/
 │── grater-jax/       # Package root for grater-jax
    │── disk_model/    # Code for disk modeling
    │── optimization/  # Tools for statistical optimization and analysis
-|── docs/             # Documenation and tutorial notebooks
+|── docs/             # Documentation and tutorial notebooks
+|—— tests/            # Automated tests
 │── pyproject.toml    # Installation file
 │── README.md
 ```
