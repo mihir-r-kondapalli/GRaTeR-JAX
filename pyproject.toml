@@ -61,11 +61,6 @@ docs = [
     "photutils>=1.8,<1.14"
 ]
 
-hmc = [
-    "blackjax>=1.0,<2.0",
-    "numpyro>=0.13,<0.16",
-]
-
 webbpsf = [
     "webbpsf>=1.0,<1.4",
     "webbpsf_ext>=1.0,<1.4",
