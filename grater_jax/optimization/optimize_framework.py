@@ -130,7 +130,7 @@ class Optimizer:
         """
         if jnp.shape(throughput) != (self.misc_params['ny'], self.misc_params['nx']):
             raise ValueError("Throughput image shape does not match the specified image dimensions in misc_params.")
-        self.throughput = throughput
+        self.throughput = jnp.array(throughput)
 
     def get_model(self):
         """
