@@ -100,7 +100,42 @@ class ScatteredLightDisk(Jax_class):
     @classmethod
     @partial(jax.jit, static_argnums=(0,))
     def init(cls, distr_params, itilt, pa, alpha_in, alpha_out, sma, nx=200, ny=200, distance=50., omega=0., pxInArcsec=0.01225, xdo=0., ydo=0.):
+        """Compute derived geometric parameters and pack them into a distribution parameter array.
 
+        Parameters
+        ----------
+        distr_params : jax.numpy.ndarray
+            Existing packed distribution parameter array (used to resolve inclination ambiguity).
+        itilt : float
+            Disk inclination with respect to the line of sight, in degrees.
+        pa : float
+            Position angle of the disk, in degrees.
+        alpha_in : float
+            Inner power-law index of the dust density profile.
+        alpha_out : float
+            Outer power-law index of the dust density profile.
+        sma : float
+            Semi-major axis (ring radius) of the disk, in AU.
+        nx : int, optional
+            Number of pixels along the x axis. Default is 200.
+        ny : int, optional
+            Number of pixels along the y axis. Default is 200.
+        distance : float, optional
+            Distance to the star in parsecs. Default is 50.
+        omega : float, optional
+            Argument of periapsis, in degrees. Default is 0.
+        pxInArcsec : float, optional
+            Pixel scale in arcsec/pixel. Default is 0.01225.
+        xdo : float, optional
+            Disk offset along the semi-major axis, in AU. Default is 0.
+        ydo : float, optional
+            Disk offset along the semi-minor axis, in AU. Default is 0.
+
+        Returns
+        -------
+        jax.numpy.ndarray
+            Packed distribution parameter array.
+        """
         p_dict = {}
 
         p_dict["nx"] = nx    # number of pixels along the x axis of the image

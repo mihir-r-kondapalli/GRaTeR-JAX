@@ -80,6 +80,37 @@ class Optimizer:
                  misc_params, StellarPSFModel = None, stellar_psf_params = None, empirical_psf_image = None,
                  throughput = None,
                  **kwargs):
+        """Initialise an Optimizer with disk, distribution, SPF, and PSF models and their parameters.
+
+        Parameters
+        ----------
+        DiskModel : type
+            Scattered light disk model class (e.g. ``ScatteredLightDisk``).
+        DistrModel : type
+            Dust distribution model class (e.g. ``DustEllipticalDistribution2PowerLaws``).
+        FuncModel : type
+            Scattering phase function model class (e.g. ``InterpolatedUnivariateSpline_SPF``).
+        PSFModel : type
+            PSF model class (e.g. ``EMP_PSF`` or ``Gaussian_PSF``).
+        disk_params : dict
+            Dictionary of disk geometric and structural parameters.
+        spf_params : dict
+            Dictionary of SPF parameters.
+        psf_params : dict
+            Dictionary of PSF parameters.
+        misc_params : dict
+            Dictionary of miscellaneous parameters (pixel scale, image size, distance, etc.).
+        StellarPSFModel : type, optional
+            On-axis stellar PSF model class; ``None`` disables stellar subtraction.
+        stellar_psf_params : dict, optional
+            Parameter dictionary for the stellar PSF model.
+        empirical_psf_image : np.ndarray, optional
+            Image used as the empirical PSF kernel; stored on ``EMP_PSF.img``.
+        throughput : array-like, optional
+            Throughput correction image; stored as a JAX array.
+        **kwargs
+            Additional keyword arguments forwarded to the objective model function.
+        """
         self.DiskModel = DiskModel
         self.DistrModel = DistrModel
         self.FuncModel = FuncModel
@@ -681,6 +712,18 @@ class Optimizer:
         print("Misc Params: " + str(self.misc_params))
 
     def plot_spline(self, num_points=100):
+        """Plot the current spline SPF as a function of cos(phi).
+
+        Parameters
+        ----------
+        num_points : int, optional
+            Number of evaluation points along the cos(phi) axis. Default is 100.
+
+        Returns
+        -------
+        matplotlib.figure.Figure
+            Figure containing the SPF curve with knot positions marked.
+        """
         fig, ax = plt.subplots()
 
         x = np.linspace(-1, 1, num_points)
@@ -913,7 +956,15 @@ class Optimizer:
             select_bools.append(key in selected_params)
         return select_bools
 
-    def save_human_readable(self,dirname):
+    def save_human_readable(self, dirname):
+        """Save all current model parameters to a human-readable text file.
+
+        Parameters
+        ----------
+        dirname : str
+            Directory in which to write the file. The filename is derived from
+            ``self.name`` and ``self.last_fit``.
+        """
         with open(os.path.join(dirname,'{}_{}_hrparams.txt'.format(self.name,self.last_fit)), 'w') as save_file:
             save_file.write('Model Name: {}\n \n'.format(self.name))
             save_file.write('Method: {}\n \n'.format(self.last_fit))
@@ -959,7 +1010,18 @@ class Optimizer:
                 return param_dict[key]
         raise KeyError(f"{key} not found in any parameter dict.")
 
-    def save_machine_readable(self,dirname):
+    def save_machine_readable(self, dirname):
+        """Save all current model parameters to JSON files for later reloading.
+
+        Writes four separate JSON files (disk, SPF, PSF, misc params) into
+        ``dirname``. Array-valued parameters are serialised as lists.
+
+        Parameters
+        ----------
+        dirname : str
+            Directory in which to write the JSON files. Filenames are derived
+            from ``self.name`` and ``self.last_fit``.
+        """
         with open(os.path.join(dirname,'{}_{}_diskparams.json'.format(self.name,self.last_fit)), 'w') as save_file:
             json.dump(self.disk_params, save_file)
         with open(os.path.join(dirname,'{}_{}_spfparams.json'.format(self.name,self.last_fit)), 'w') as save_file:
@@ -982,7 +1044,18 @@ class Optimizer:
             json.dump(serializable_misc, save_file)
         print("Saved machine readable files to json in "+dirname)
     
-    def load_machine_readable(self,dirname,method=None):
+    def load_machine_readable(self, dirname, method=None):
+        """Load model parameters from previously saved JSON files.
+
+        Parameters
+        ----------
+        dirname : str
+            Directory containing the JSON files to load.
+        method : str, optional
+            Fitting method tag used in the filename (``'scipyminimize'``,
+            ``'scipyboundminimize'``, or ``'mcmc'``). Defaults to
+            ``self.last_fit``.
+        """
         ### defaults to last fitting mechanism, but can be changed to scipyminimize, scipyboundminimize, or mcmc
         if method == None:
             method = self.last_fit
@@ -1325,6 +1398,18 @@ class OptimizeUtils:
         cls.scaled_image = (image[::scale_factor, ::scale_factor])[1::, 1::]
         cropped_image = image[bounds[0]:bounds[1],bounds[0]:bounds[1]]
         def safe_float32_conversion(value):
+            """Convert a value to float32, printing a warning if conversion fails.
+
+            Parameters
+            ----------
+            value : any
+                Value to convert.
+
+            Returns
+            -------
+            np.float32 or None
+                The converted value, or ``None`` if conversion raises an error.
+            """
             try:
                 return np.float32(value)
             except (ValueError, TypeError):

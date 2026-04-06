@@ -214,12 +214,36 @@ class InterpolatedUnivariateSpline(object):
 
     # Operations for flattening/unflattening representation
     def tree_flatten(self):
+        """Flatten the spline into JAX-compatible pytree children and auxiliary data.
+
+        Returns
+        -------
+        tuple
+            A 2-tuple ``(children, aux_data)`` where ``children`` is
+            ``(x, y, coefficients)`` and ``aux_data`` is a dict with
+            ``'endpoints'`` and ``'k'``.
+        """
         children = (self._x, self._y, self._coefficients)
         aux_data = {"endpoints": self._endpoints, "k": self.k}
         return (children, aux_data)
 
     @classmethod
     def tree_unflatten(cls, aux_data, children):
+        """Reconstruct a spline from JAX pytree children and auxiliary data.
+
+        Parameters
+        ----------
+        aux_data : dict
+            Dictionary with keys ``'endpoints'`` and ``'k'`` as produced by
+            ``tree_flatten``.
+        children : tuple
+            Tuple ``(x, y, coefficients)`` as produced by ``tree_flatten``.
+
+        Returns
+        -------
+        InterpolatedUnivariateSpline
+            Reconstructed spline object.
+        """
         x, y, coefficients = children
         return cls(x, y, coefficients=coefficients, **aux_data)
 

@@ -264,8 +264,14 @@ def objective_ll(disk_params, spf_params, psf_params, stellar_psf_params, misc_p
     )
 
     sigma2 = jnp.power(err_map, 2)
-    result = jnp.power((target_image - model_image), 2) / sigma2 + jnp.log(sigma2)
-    result = jnp.where(jnp.isnan(result), 0, result)
+    # Compute validity mask before any division/log so that NaN never enters the
+    # gradient path.  Zero-error pixels are masked (invalid); NaN image pixels
+    # (e.g. coronagraph mask) are also excluded.
+    valid = jnp.isfinite(target_image) & (sigma2 > 0)
+    safe_sigma2 = jnp.where(valid, sigma2, 1.0)
+    safe_diff = jnp.where(valid, target_image - model_image, 0.0)
+    result = safe_diff ** 2 / safe_sigma2 + jnp.log(safe_sigma2)
+    result = jnp.where(valid, result, 0.0)
 
     return -0.5 * jnp.sum(result)  # / jnp.size(target_image)
 
