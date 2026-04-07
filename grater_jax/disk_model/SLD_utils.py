@@ -520,6 +520,20 @@ class GAUSSIAN_PSF(Jax_class):
     @classmethod
     @partial(jax.jit, static_argnums=(0))
     def generate(cls, image, psf_params):
+        """Apply a Gaussian PSF to an image via FFT-based convolution.
+
+        Parameters
+        ----------
+        image : jax.numpy.ndarray
+            2D input image to be smoothed.
+        psf_params : jax.numpy.ndarray
+            Packed PSF parameter array as returned by ``pack_pars``.
+
+        Returns
+        -------
+        jax.numpy.ndarray
+            Smoothed image with the Gaussian PSF applied and offset added.
+        """
         ny, nx = image.shape    # Get image size
         p_dict = cls.unpack_pars(psf_params)
         FWHM = p_dict["FWHM"]
@@ -556,6 +570,20 @@ class EMP_PSF(Jax_class):
     @classmethod
     @partial(jax.jit, static_argnums=(0))
     def generate(cls, image, psf_params):
+        """Convolve the input image with the empirical PSF via FFT.
+
+        Parameters
+        ----------
+        image : jax.numpy.ndarray
+            2D input image to convolve.
+        psf_params : jax.numpy.ndarray
+            Packed PSF parameter array (unused; convolution uses ``cls.img``).
+
+        Returns
+        -------
+        jax.numpy.ndarray
+            Image convolved with the stored empirical PSF.
+        """
         return jss.fftconvolve(image, cls.img, mode='same')
 
 class Winnie_PSF(Jax_class):
@@ -565,16 +593,64 @@ class Winnie_PSF(Jax_class):
     @classmethod
     @partial(jax.jit, static_argnames=['cls', 'num_unique_psfs'])
     def init(cls, psfs, psf_inds_rolls, im_mask_rolls, psf_offsets, psf_parangs, num_unique_psfs):
+        """Initialise and return a WinniePSF object from raw PSF grid arrays.
+
+        Parameters
+        ----------
+        psfs : array-like
+            PSF grid images.
+        psf_inds_rolls : array-like
+            Roll indices for each PSF.
+        im_mask_rolls : array-like
+            Image mask rolls.
+        psf_offsets : array-like
+            Positional offsets for each PSF.
+        psf_parangs : array-like
+            Position angles for each PSF.
+        num_unique_psfs : int
+            Number of unique PSFs in the grid.
+
+        Returns
+        -------
+        WinniePSF
+            Initialised Winnie PSF model object.
+        """
         return WinniePSF(psfs, psf_inds_rolls, im_mask_rolls, psf_offsets, psf_parangs, num_unique_psfs)
 
     @classmethod
     @partial(jax.jit, static_argnums=(0))
     def pack_pars(cls, winnie_model):
+        """Return the WinniePSF model unchanged (identity packing).
+
+        Parameters
+        ----------
+        winnie_model : WinniePSF
+            Winnie PSF model object.
+
+        Returns
+        -------
+        WinniePSF
+            The same model object, unchanged.
+        """
         return winnie_model
 
     @classmethod
     @partial(jax.jit, static_argnums=(0))
     def generate(cls, image, winnie_model):
+        """Convolve an image with the Winnie PSF and return the mean over spacecraft rolls.
+
+        Parameters
+        ----------
+        image : jax.numpy.ndarray
+            2D input image to convolve.
+        winnie_model : WinniePSF
+            Packed Winnie PSF model as returned by ``pack_pars``.
+
+        Returns
+        -------
+        jax.numpy.ndarray
+            Mean of the roll-convolved image cube.
+        """
         return jnp.mean(winnie_model.get_convolved_cube(image), axis=0)
     
 class StellarPSFReference:
@@ -593,11 +669,35 @@ class LinearStellarPSF(Jax_class):
     @classmethod
     @partial(jax.jit, static_argnames=['cls'])
     def pack_pars(cls, p_dict):
+        """Pack stellar PSF parameters into a flat array.
+
+        Parameters
+        ----------
+        p_dict : dict
+            Parameter dictionary with key ``'stellar_weights'``.
+
+        Returns
+        -------
+        jax.numpy.ndarray
+            1D array of stellar weights.
+        """
         return p_dict['stellar_weights']
-    
+
     @classmethod
     @partial(jax.jit, static_argnames=['cls'])
     def unpack_pars(cls, stellar_psf_params):
+        """Unpack a flat parameter array into the stellar PSF parameter dictionary.
+
+        Parameters
+        ----------
+        stellar_psf_params : jax.numpy.ndarray
+            1D array of stellar weights.
+
+        Returns
+        -------
+        dict
+            Dictionary with key ``'stellar_weights'``.
+        """
         p_dict = {}
         p_dict['stellar_weights'] = stellar_psf_params
         return p_dict
@@ -623,11 +723,43 @@ class PositionalStellarPSF(Jax_class):
     @classmethod
     @partial(jax.jit, static_argnames=['cls'])
     def pack_pars(cls, p_dict):
+        """Pack positional stellar PSF parameters into a single flat array.
+
+        Concatenates ``stellar_weights``, ``stellar_xs``, and ``stellar_ys``
+        in that order.
+
+        Parameters
+        ----------
+        p_dict : dict
+            Dictionary with keys ``'stellar_weights'``, ``'stellar_xs'``, and
+            ``'stellar_ys'``.
+
+        Returns
+        -------
+        jax.numpy.ndarray
+            1D concatenated parameter array.
+        """
         return jnp.concatenate([p_dict['stellar_weights'], p_dict['stellar_xs'], p_dict['stellar_ys']])
     
     @classmethod
     @partial(jax.jit, static_argnames=['cls'])
     def unpack_pars(cls, stellar_psf_params):
+        """Unpack a flat parameter array into the positional stellar PSF dictionary.
+
+        Splits the array into ``stellar_weights``, ``stellar_xs``, and
+        ``stellar_ys`` based on the number of PSF reference images.
+
+        Parameters
+        ----------
+        stellar_psf_params : jax.numpy.ndarray
+            1D concatenated array produced by ``pack_pars``.
+
+        Returns
+        -------
+        dict
+            Dictionary with keys ``'stellar_weights'``, ``'stellar_xs'``,
+            ``'stellar_ys'``.
+        """
         p_dict = {}
         psf_refs = StellarPSFReference.reference_images
         N, h, w = psf_refs.shape
@@ -651,6 +783,25 @@ class PositionalStellarPSF(Jax_class):
         yy = jnp.arange(w).reshape(1, w)  # shape (1, w)
 
         def place_one(weight, x, y, psf_img):
+            """Bilinearly splat one weighted PSF reference onto the output pixel grid.
+
+            Parameters
+            ----------
+            weight : float
+                Scalar weight for this reference image.
+            x : float
+                Sub-pixel x position (row) of the PSF centre.
+            y : float
+                Sub-pixel y position (column) of the PSF centre.
+            psf_img : jax.numpy.ndarray
+                2D PSF reference image of shape (h, w).
+
+            Returns
+            -------
+            tuple of jax.numpy.ndarray
+                (all_x, all_y, all_v) — pixel row indices, column indices, and
+                corresponding weighted values to scatter into the output image.
+            """
             x0 = x - h / 2.0
             y0 = y - w / 2.0
 
@@ -682,6 +833,21 @@ class PositionalStellarPSF(Jax_class):
             weight_maps = jnp.stack([w00, w10, w01, w11], axis=0)
 
             def gather(shift, weight_map):
+                """Collect bilinear contributions for a single integer pixel shift.
+
+                Parameters
+                ----------
+                shift : jax.numpy.ndarray
+                    Length-2 integer array [dx, dy] representing the shift offset.
+                weight_map : jax.numpy.ndarray
+                    2D array of bilinear interpolation weights for this shift.
+
+                Returns
+                -------
+                tuple of jax.numpy.ndarray
+                    (xi, yi, val) — row indices, column indices, and weighted
+                    values for valid (in-bounds) pixels only.
+                """
                 dx, dy = shift
                 xi = x0i + dx  # (h, w)
                 yi = y0i + dy
@@ -692,9 +858,11 @@ class PositionalStellarPSF(Jax_class):
                 val = val.reshape(-1)
 
                 mask = (xi >= 0) & (xi < nx) & (yi >= 0) & (yi < ny)
-                idx = jnp.nonzero(mask, size=xi.size, fill_value=0)[0]
+                val = jnp.where(mask, val, 0.0)
+                xi = jnp.clip(xi, 0, nx - 1)
+                yi = jnp.clip(yi, 0, ny - 1)
 
-                return xi[idx], yi[idx], val[idx]
+                return xi, yi, val
 
             coords = [gather(shifts[i], weight_maps[i]) for i in range(4)]
             all_x = jnp.concatenate([c[0] for c in coords])

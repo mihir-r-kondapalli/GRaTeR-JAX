@@ -29,7 +29,7 @@ class WinniePSF:
     """
     A class for spatially-varying PSF convolution with image cubes, including rotation
     and masking per roll angle. Class is a JAX pytree implementation of Kellen Lawson's
-    incredible Winnie package for PSF subtraction.
+    Winnie package for PSF subtraction.
 
     Parameters
     ----------
@@ -57,6 +57,23 @@ class WinniePSF:
     """
 
     def __init__(self, psfs, psf_inds_rolls, im_mask_rolls, psf_offsets, psf_parangs, num_unique_psfs):
+        """Store PSF grid arrays as JAX arrays for use in convolution.
+
+        Parameters
+        ----------
+        psfs : array-like
+            PSF grid images.
+        psf_inds_rolls : array-like
+            Roll indices for each PSF.
+        im_mask_rolls : array-like
+            Image mask rolls.
+        psf_offsets : array-like
+            Positional offsets for each PSF.
+        psf_parangs : array-like
+            Position angles for each PSF.
+        num_unique_psfs : int
+            Number of unique PSFs in the grid.
+        """
         self.psfs = jnp.array(psfs)
         self.psf_inds_rolls = jnp.array(psf_inds_rolls)
         self.im_mask_rolls = jnp.array(im_mask_rolls)

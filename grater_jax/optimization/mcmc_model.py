@@ -40,6 +40,17 @@ class MCMC_model():
     """
 
     def __init__(self, fun, theta_bounds, name):
+        """Initialise an MCMC with the log-likelihood function and parameter bounds.
+
+        Parameters
+        ----------
+        fun : callable
+            The log-likelihood function to evaluate.
+        theta_bounds : tuple of np.ndarray
+            Tuple ``(lower_bounds, upper_bounds)`` for parameters.
+        name : str
+            Name of the model, used for the HDF5 backend filename.
+        """
         self.fun = fun
         self.theta_bounds = theta_bounds
         self.sampler = None
