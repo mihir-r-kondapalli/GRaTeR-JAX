@@ -668,6 +668,92 @@ class Optimizer:
         self.spf_params['backscatt_bound'] = jnp.cos(jnp.deg2rad(90+self.disk_params['inclination']+buffer))
         return self.spf_params
 
+    def warm_start_knots(self, init_g=0.5):
+        """
+        Initialise spline SPF knot values from a normalised Henyey-Greenstein shape.
+
+        The spline SPF is normalised to 1 at 90 degrees (cos_phi = 0) by construction,
+        so the center knot is fixed and only the ``num_knots`` free knots are set here.
+        Warm-starting from an HG shape (rather than all-ones) avoids a flat-spline local
+        minimum that appears at lower inclinations where the probed scattering-angle range
+        is narrow.  ``init_g`` is an assumed asymmetry parameter used only to generate the
+        initial guess — it is not a constraint on the fit.
+
+        Call ``inc_bound_knots`` before this method if you want the knot positions to
+        reflect the actual scattering angles probed by the disk inclination.
+
+        Parameters
+        ----------
+        init_g : float, optional
+            Henyey-Greenstein asymmetry parameter used for initialisation (default 0.5).
+            Positive values produce forward-scattering shapes; negative values produce
+            back-scattering shapes.  The value is not constrained during fitting.
+
+        Returns
+        -------
+        jnp.ndarray
+            The initialised free knot values (also stored in ``self.spf_params['knot_values']``).
+        """
+        def _hg_normalized(cos_phi, g):
+            raw  = (1.0 / (4.0 * np.pi)) * (1 - g**2) / (1 + g**2 - 2*g*cos_phi)**1.5
+            norm = (1.0 / (4.0 * np.pi)) * (1 - g**2) / (1 + g**2)**1.5
+            return raw / norm
+
+        nk = self.spf_params['num_knots']
+        knot_cos = np.array(InterpolatedUnivariateSpline_SPF.get_knots(self.spf_params))
+        n_left = nk // 2
+        # get_knots returns num_knots + 1 positions (including the fixed center knot at
+        # cos_phi = 0).  Drop that center index before evaluating HG.
+        free_knot_cos = np.concatenate([knot_cos[:n_left], knot_cos[n_left + 1:]])
+        knot_values = jnp.array(_hg_normalized(free_knot_cos, init_g))
+        self.spf_params['knot_values'] = knot_values
+        return knot_values
+
+    def estimate_flux_scaling(self, target_image, inner_mask_radius=12):
+        """
+        Estimate a starting ``flux_scaling`` by matching the model peak to the target image.
+
+        The model (at ``flux_scaling = 1``) is evaluated once and its peak is compared to
+        the 99th-percentile brightness of unmasked pixels in the target image.  The ratio
+        gives a robust starting estimate that avoids bias from background pixels.
+
+        .. note::
+            This is one reasonable heuristic for initialising ``flux_scaling``, not the
+            only valid approach.  Users are responsible for verifying that the estimate is
+            sensible for their data — edge-on disks with strong forward scattering, very
+            faint disks, or images with bright artefacts may need a different strategy.
+
+        Parameters
+        ----------
+        target_image : numpy.ndarray
+            The science image to match against.
+        inner_mask_radius : float, optional
+            Pixels within this radius (in pixels) of the image centre are excluded from
+            the 99th-percentile calculation to avoid contamination from a coronagraphic
+            mask or stellar residuals (default 12).
+
+        Returns
+        -------
+        float
+            The estimated ``flux_scaling`` (also stored in ``self.misc_params['flux_scaling']``).
+        """
+        self.misc_params['flux_scaling'] = 1.0
+        init_image = self.get_model()
+
+        y_idx, x_idx = np.indices(target_image.shape)
+        y_idx = y_idx - self.misc_params['ny'] // 2
+        x_idx = x_idx - self.misc_params['nx'] // 2
+        mask = np.sqrt(x_idx**2 + y_idx**2) > inner_mask_radius
+
+        p99 = np.nanpercentile(target_image[mask], 99)
+        model_peak = float(jnp.nanmax(init_image)) + 1e-40
+        if self.disk_params['inclination'] > 70:
+            flux_est = p99 / model_peak
+        else:
+            flux_est = 0.2 * p99 / model_peak
+        self.misc_params['flux_scaling'] = float(flux_est)
+        return float(flux_est)
+
     def compute_stellar_psf_image(self):
         """
         Just returns an image of the stellar psf model.
