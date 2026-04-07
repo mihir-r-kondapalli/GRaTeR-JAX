@@ -40,7 +40,7 @@ class MCMC_model():
     """
 
     def __init__(self, fun, theta_bounds, name):
-        """Initialise an MCMCModel with the log-likelihood function and parameter bounds.
+        """Initialise an MCMC with the log-likelihood function and parameter bounds.
 
         Parameters
         ----------

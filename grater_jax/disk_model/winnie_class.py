@@ -29,7 +29,7 @@ class WinniePSF:
     """
     A class for spatially-varying PSF convolution with image cubes, including rotation
     and masking per roll angle. Class is a JAX pytree implementation of Kellen Lawson's
-    incredible Winnie package for PSF subtraction.
+    Winnie package for PSF subtraction.
 
     Parameters
     ----------

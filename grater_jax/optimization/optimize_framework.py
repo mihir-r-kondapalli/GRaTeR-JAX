@@ -720,8 +720,7 @@ class Optimizer:
         .. note::
             This is one reasonable heuristic for initialising ``flux_scaling``, not the
             only valid approach.  Users are responsible for verifying that the estimate is
-            sensible for their data — edge-on disks with strong forward scattering, very
-            faint disks, or images with bright artefacts may need a different strategy.
+            sensible for their data.
 
         Parameters
         ----------

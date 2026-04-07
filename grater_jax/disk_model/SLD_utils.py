@@ -637,7 +637,7 @@ class Winnie_PSF(Jax_class):
     @classmethod
     @partial(jax.jit, static_argnums=(0))
     def generate(cls, image, winnie_model):
-        """Convolve an image with the Winnie PSF and return the mean over rolls.
+        """Convolve an image with the Winnie PSF and return the mean over spacecraft rolls.
 
         Parameters
         ----------
