@@ -1,5 +1,5 @@
 ```md
-# Installation
+## Installation
 
 We recommend using Conda to create a fresh environment in which to run GRaTer-JAX, to ensure all dependencies are met:
 
