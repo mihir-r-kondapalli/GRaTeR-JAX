@@ -404,7 +404,11 @@ class InterpolatedUnivariateSpline_SPF(Jax_class):
         y values of the knots
     """
 
+<<<<<<< HEAD
     params = {'backscatt_bound': -1, 'forwardscatt_bound': 1, 'num_knots': 6, 'knot_values': (1., 1., 1., 1., 1., 1.)}
+=======
+    params = {'backscatt_bound': -1, 'forwardscatt_bound': 1, 'num_knots': 6, 'knot_values': np.ones(6)}
+>>>>>>> d52acc2 (slight fixes to package dependencies and added in throughput file for tutorials)
 
     @classmethod
     @partial(jax.jit, static_argnums=(0))
@@ -671,7 +675,7 @@ class StellarPSFReference:
     Reference images that the Stellar PSF classes will use.
     """
 
-    reference_images = jnp.zeros((10, 10))
+    reference_images = np.zeros((10, 10))
 
 class LinearStellarPSF(Jax_class):
     """Stellar PSF model as a linear combination of reference images."""

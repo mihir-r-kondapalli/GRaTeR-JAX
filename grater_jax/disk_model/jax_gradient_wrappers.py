@@ -13,6 +13,7 @@ there is some overhead needed to match the parameters of the two, this is handle
 by objective_grad in objective_functions.py.
 """
 
+import numpy as np
 import jax
 import jax.numpy as jnp
 
@@ -258,7 +259,7 @@ def jax_model_winnie_ll(DiskModel, DistrModel, FuncModel, winnie_psf, StellarPSF
 
 def jax_model_spline_ll(DiskModel, DistrModel, FuncModel, PSFModel, StellarPSFModel, disk_params, spf_params, psf_params, stellar_psf_params, target_image, err_map,
                      throughput, flux_scaling = 1e6, distance = 0., pxInArcsec = 0., nx = 140, ny = 140, halfNbSlices = 25,
-                     knots=jnp.linspace(1,-1,7)):
+                     knots=np.linspace(1,-1,7)):
 
     """
     Get the log likelihood for the generated disk model image given disk, scattering function, point spread function,
@@ -360,7 +361,7 @@ def jax_model_spline_ll(DiskModel, DistrModel, FuncModel, PSFModel, StellarPSFMo
 
 def jax_model_spline_winnie_ll(DiskModel, DistrModel, FuncModel, winnie_psf, StellarPSFModel, disk_params, spf_params, stellar_psf_params, target_image, err_map,
                      throughput, flux_scaling = 1e6, distance = 0., pxInArcsec = 0., nx = 140, ny = 140, halfNbSlices = 25,
-                     knots=jnp.linspace(1,-1,7)):
+                     knots=np.linspace(1,-1,7)):
 
     """
     Get the log likelihood for the generated disk model image given disk, scattering function, point spread function,

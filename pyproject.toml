@@ -37,11 +37,6 @@ dependencies = [
     "xarray>=2023.1,<2024.10",
     "h5py>=3.11.0",
 
-    # --- JAX ecosystem (GPU-compatible, pinned) ---
-    "jax>=0.4.20,<=0.4.34",
-    "jaxlib>=0.4.20,<=0.4.34",
-    "jaxopt>=0.8,<0.9",
-
     # --- Progress bars and utilities ---
     "tqdm>=4.65,<5.0"
 ]
