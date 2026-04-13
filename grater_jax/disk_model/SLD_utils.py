@@ -671,7 +671,7 @@ class StellarPSFReference:
     Reference images that the Stellar PSF classes will use.
     """
 
-    reference_images = jnp.zeros((10, 10))
+    reference_images = np.zeros((10, 10))
 
 class LinearStellarPSF(Jax_class):
     """Stellar PSF model as a linear combination of reference images."""
