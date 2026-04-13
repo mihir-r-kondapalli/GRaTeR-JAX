@@ -236,53 +236,46 @@ class ScatteredLightDisk(Jax_class):
         zsn_vector = jnp.where(validPixel_map, -disk["sini"]*y_map, 0)
         xd_vector = jnp.where(validPixel_map, x_map, 0)  # x_disk, in AU
 
-        #limage = jnp.zeros([nbSlices, ny, nx])
-        #image = jnp.zeros((ny, nx))
+        # Vectorized line-of-sight integration: compute all slices at once.
+        # ll: (nbSlices,), maps: (ny, nx) → intermediates: (nbSlices, ny, nx)
+        # Distance along the line of sight to each plane z
+        l_all = jnp.where(validPixel_map,
+                          lz0_map + ll[:, None, None] * dl_map, 0)
 
-        for il in range(nbSlices):
-            # distance along the line of sight to reach the plane z
+        # rotation about x axis
+        yd_all = ycs_vector + disk["sini"] * l_all   # y_Disk in AU
+        zd_all = zsn_vector + disk["cosi"] * l_all   # z_Disk in AU
 
-            l_vector = jnp.where(validPixel_map, lz0_map + ll[il]*dl_map, 0)
-            #l_vector = lz0_map + ll[il]*dl_map
+        # Dist and polar angles in the frame centered on the star position
+        d2star_all = xd_vector**2 + yd_all**2 + zd_all**2
+        dstar_all = jnp.sqrt(d2star_all + 1e-8)
+        rstar_all = jnp.sqrt(xd_vector**2 + yd_all**2 + 1e-8)
+        thetastar_all = jnp.arctan2(yd_all, xd_vector + 1e-8)
 
-            # rotation about x axis
-            yd_vector = ycs_vector + disk["sini"] * l_vector  # y_Disk in AU
-            zd_vector = zsn_vector + disk["cosi"] * l_vector  # z_Disk, in AU
-            # Dist and polar angles in the frame centered on the star position:
-            # squared distance to the star, in AU^2
-            d2star_vector = xd_vector**2+yd_vector**2+zd_vector**2
-            dstar_vector = jnp.sqrt(d2star_vector + 1e-8)  # distance to the star, in AU
-            # midplane distance to the star (r coordinate), in AU
-            rstar_vector = jnp.sqrt(xd_vector**2+yd_vector**2+1e-8)
-            thetastar_vector = jnp.arctan2(yd_vector, xd_vector+1e-8)
-            # Phase angles:
-            cosphi_vector = (rstar_vector*disk["sini"]*jnp.sin(thetastar_vector) +
-                             zd_vector*disk["cosi"])/(dstar_vector+1e-8)  # in radians
-            # Polar coordinates in the disk frame, and semi-major axis:
-            # midplane distance to the disk center (r coordinate), in AU
-            r_vector = jnp.sqrt((xd_vector-disk["xdo"])**2+(yd_vector-disk["ydo"])**2+1e-8)
-            # polar angle in radians between 0 and pi
-            theta_vector = jnp.arctan2(yd_vector-disk["ydo"], xd_vector-disk["xdo"]+1e-8)
+        # Phase angles
+        cosphi_all = (rstar_all * disk["sini"] * jnp.sin(thetastar_all) +
+                      zd_all * disk["cosi"]) / (dstar_all + 1e-8)
 
-            costheta_vector = jnp.cos(theta_vector-jnp.deg2rad(disk["omega"]))
-            # Scattered light:
-            # volume density
-            rho_vector = distr_cls.density_cylindrical(distr_params, r_vector,
-                                                               costheta_vector,
-                                                               zd_vector)
-            phase_function = phase_func_cls.compute_phase_function_from_cosphi(phase_func_params, cosphi_vector)
-            #image = np.ndarray((disk["ny"], disk["nx"]))
-            image = jnp.where(validPixel_map, rho_vector*phase_function/(d2star_vector + 1e-8), 0)
-            #limage[il, :, :] = image
-            limage = limage.at[il,:,:].set(image)
+        # Polar coordinates in the disk frame
+        r_all = jnp.sqrt((xd_vector - disk["xdo"])**2 +
+                         (yd_all - disk["ydo"])**2 + 1e-8)
+        theta_all = jnp.arctan2(yd_all - disk["ydo"],
+                                xd_vector - disk["xdo"] + 1e-8)
+        costheta_all = jnp.cos(theta_all - jnp.deg2rad(disk["omega"]))
 
-        for il in range(1, nbSlices):
-            scattered_light_map += (ll[il]-ll[il-1]) * (limage[il-1, :, :] +
-                                                             limage[il, :, :])
-            
+        # Scattered light: density × phase function / distance²
+        rho_all = distr_cls.density_cylindrical(
+            distr_params, r_all, costheta_all, zd_all
+        )
+        phase_all = phase_func_cls.compute_phase_function_from_cosphi(
+            phase_func_params, cosphi_all
+        )
+        limage = jnp.where(validPixel_map,
+                           rho_all * phase_all / (d2star_all + 1e-8), 0)
 
+        # Trapezoidal integration along line of sight
         dl = ll[1:] - ll[:-1]                      # (nbSlices-1,)
-        pair_sum = limage[:-1] + limage[1:]        # (nbSlices-1, H, W)
+        pair_sum = limage[:-1] + limage[1:]        # (nbSlices-1, ny, nx)
 
         scattered_light_map = jnp.sum(dl[:, None, None] * pair_sum, axis=0)
         scattered_light_map = jnp.where(validPixel_map, scattered_light_map * dl_map / 2. * disk["pxInAU"]**2, 0)
