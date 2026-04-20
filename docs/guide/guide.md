@@ -2,22 +2,6 @@
 
 This page provides a **high-level introduction**, **conceptual workflow**, and **block-diagram–driven understanding** of the GRaTeR-JAX codebase. It is intended to help new users and contributors quickly understand how the different components fit together: from user scripts and notebooks, through optimization logic, down to JAX-compiled disk models and gradients.
 
-## Installation
-
-To install GRaTeR-JAX and its dependencies, create a new Conda environment with Python and run:
-
-```sh
-pip install grater-jax
-```
-
-Make sure you have JAX installed with the correct backend for your hardware:
-
-```sh
-pip install --upgrade "jax[cpu]"  # or "jax[cuda]" for GPU
-```
-
-Highly recommended to install this on a fresh environment, just to be safe.
-
 ---
 
 ## 1. What is GRaTeR-JAX?
