@@ -8,8 +8,9 @@ This page provides a **high-level introduction**, **conceptual workflow**, and *
 
 **GRaTeR-JAX** is a JAX-native, differentiable implementation of the GRaTeR scattered-light debris disk framework from [Augereau+ 1999](https://ui.adsabs.harvard.edu/abs/1999A%26A...348..557A/abstract). It is designed to:
 
-- Model scattered-light images of circumstellar **debris disks** 
-- Enable **gradient-based optimization** and **probabilistic inference (MCMC)**  
+- Generate scattered-light images of circumstellar **debris disks**
+- Perform fast, accurate model fitting using **automatic differentiation**
+- Support **MCMC-based probabilistic inference** to estimate disk parameters and uncertainties
 - Run efficiently on CPU/GPU via **JAX JIT compilation**
 
 The library cleanly separates:
