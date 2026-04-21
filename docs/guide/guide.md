@@ -82,13 +82,13 @@ GRaTeR-JAX is organized around a **clean separation of concerns**. The diagram b
 
 ### Core components
 
-#### User Scripts / Notebooks
-- Entry point for most users
-- Define models, parameters, and run fits
-- Examples:
-  - `DiskTutorial.ipynb`
-  - `FitsTutorial.ipynb`
-  - `SpeedComparision.ipynb`
+#### Tutorials
+- `DiskTutorial.ipynb`
+- `FitsTutorial.ipynb`
+- `SPFInjectionRecoveryTutorial.ipynb`
+- `SpeedComparision.ipynb`
+
+[Tutorial Page](https://grater-jax.readthedocs.io/en/latest/tutorials/index.html)
 
 #### Optimizer Class
 - Central orchestration layer
